@@ -36,8 +36,8 @@ export function AppSidebar({
   const coreNavItems = [
     { label: "Dashboard", icon: LayoutDashboard, href: "/" },
     { label: "Assets", icon: Package, href: "#assets" },
-    { label: "Allocation & Transfer", icon: Share2, href: "#allocations", badge: 7 },
-    { label: "Resource Booking", icon: CalendarRange, href: "#bookings" },
+    { label: "Allocation & Transfer", icon: Share2, href: "/allocations", badge: 7 },
+    { label: "Resource Booking", icon: CalendarRange, href: "/bookings" },
   ];
 
   const adminNavItems = [
@@ -45,7 +45,7 @@ export function AppSidebar({
   ];
 
   const operationalNavItems = [
-    { label: "Maintenance", icon: Wrench, href: "#maintenance", badge: 12 },
+    { label: "Maintenance", icon: Wrench, href: "/maintenance", badge: 12 },
     { label: "Audit Cycles", icon: ClipboardCheck, href: "#audit" },
   ];
 

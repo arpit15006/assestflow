@@ -6,6 +6,7 @@ import { Breadcrumbs } from "./Breadcrumbs";
 import { Input } from "../ui/Input";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { currentUser } from "@/lib/mock/users";
+import { usePathname } from "next/navigation";
 
 interface TopNavbarProps {
   onMobileMenuToggle: () => void;
@@ -14,10 +15,25 @@ interface TopNavbarProps {
 
 export function TopNavbar({ onMobileMenuToggle, collapsed }: TopNavbarProps) {
   const [searchValue, setSearchValue] = React.useState("");
+  const pathname = usePathname();
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     alert(`Searching for: "${searchValue}" (Mock Search Operation)`);
+  };
+
+  // Basic route mapping for breadcrumbs
+  const getBreadcrumbs = () => {
+    if (pathname === "/allocations") {
+      return [{ label: "Dashboard", href: "/" }, { label: "Allocation & Transfer" }];
+    }
+    if (pathname === "/bookings") {
+      return [{ label: "Dashboard", href: "/" }, { label: "Resource Booking" }];
+    }
+    if (pathname === "/maintenance") {
+      return [{ label: "Dashboard", href: "/" }, { label: "Maintenance Management" }];
+    }
+    return [{ label: "Dashboard" }];
   };
 
   return (
@@ -34,7 +50,7 @@ export function TopNavbar({ onMobileMenuToggle, collapsed }: TopNavbarProps) {
         </button>
 
         <div className="hidden sm:block">
-          <Breadcrumbs />
+          <Breadcrumbs items={getBreadcrumbs()} />
         </div>
       </div>
 

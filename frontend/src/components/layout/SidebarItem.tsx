@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { LucideIcon } from "lucide-react";
+import Link from "next/link";
 
 interface SidebarItemProps {
   label: string;
@@ -23,11 +24,10 @@ export function SidebarItem({
   collapsed = false,
 }: SidebarItemProps) {
   return (
-    <a
+    <Link
       href={href}
       onClick={(e) => {
         if (onClick) {
-          e.preventDefault();
           onClick();
         }
       }}
@@ -69,6 +69,6 @@ export function SidebarItem({
           {label}
         </div>
       )}
-    </a>
+    </Link>
   );
 }
