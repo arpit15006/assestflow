@@ -18,7 +18,7 @@ export function TopNavbar({ onMobileMenuToggle, collapsed }: TopNavbarProps) {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    alert(`Searching for: "${searchValue}" (Mock Search Operation)`);
+    // Search is handled globally or per page
   };
 
   const getBreadcrumbs = () => {

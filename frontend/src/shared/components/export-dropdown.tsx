@@ -11,16 +11,19 @@ import { Download, FileText, FileSpreadsheet, File } from "lucide-react";
 
 interface ExportDropdownProps {
   onExport?: (format: "pdf" | "excel" | "csv") => void;
+  disabled?: boolean;
 }
 
-export function ExportDropdown({ onExport }: ExportDropdownProps) {
+export function ExportDropdown({ onExport, disabled }: ExportDropdownProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
+        disabled={disabled}
         render={
           <Button
             variant="outline"
             size="sm"
+            disabled={disabled}
             className="h-9 border-zinc-200 bg-zinc-50 hover:bg-zinc-100 rounded-lg gap-2 text-sm"
           >
             <Download className="h-4 w-4" />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -47,6 +47,8 @@ import {
   ArrowUpDown,
 } from "lucide-react";
 import { SectionCard } from "@/shared/components";
+import { useAuditStore } from "../store/audit-store";
+import { toast } from "sonner";
 
 interface VerificationTableProps {
   data: AuditAsset[];
@@ -56,9 +58,18 @@ export function VerificationTable({ data }: VerificationTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [rowSelection, setRowSelection] = useState({});
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+
+  // Debounce search
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setGlobalFilter(searchQuery);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
 
   const departments = useMemo(() => {
     const depts = [...new Set(data.map((a) => a.department))];
@@ -76,6 +87,8 @@ export function VerificationTable({ data }: VerificationTableProps) {
     { label: "Pending", value: "pending" },
   ];
 
+  const { filter, verifyAsset, markMissing, markDamaged } = useAuditStore();
+
   const filteredData = useMemo(() => {
     let result = data;
     if (departmentFilter !== "all") {
@@ -84,8 +97,17 @@ export function VerificationTable({ data }: VerificationTableProps) {
     if (statusFilter !== "all") {
       result = result.filter((a) => a.verificationStatus === statusFilter);
     }
+    if (filter === "missing") {
+      result = result.filter((a) => a.verificationStatus === "missing");
+    }
+    if (filter === "damaged") {
+      result = result.filter((a) => a.verificationStatus === "damaged");
+    }
+    if (filter === "location_mismatch") {
+      result = result.filter((a) => a.actualLocation !== "—" && a.actualLocation !== a.expectedLocation);
+    }
     return result;
-  }, [data, departmentFilter, statusFilter]);
+  }, [data, departmentFilter, statusFilter, filter]);
 
   const columns: ColumnDef<AuditAsset>[] = useMemo(
     () => [
@@ -172,41 +194,81 @@ export function VerificationTable({ data }: VerificationTableProps) {
       {
         id: "actions",
         header: "",
-        cell: ({ row }) => (
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0 hover:bg-muted rounded-lg"
-                  aria-label={`Actions for ${row.original.name}`}
-                >
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              }
-            />
+        cell: ({ row }) => {
+          const asset = row.original;
+          return (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 hover:bg-muted rounded-lg"
+                    aria-label={`Actions for ${asset.name}`}
+                  >
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                }
+              />
 
-            <DropdownMenuContent align="end" className="w-40 bg-white border-zinc-200 rounded-xl p-1">
-              <DropdownMenuItem className="gap-2 rounded-lg text-sm cursor-pointer">
-                <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
-                Verify
-              </DropdownMenuItem>
-              <DropdownMenuItem className="gap-2 rounded-lg text-sm cursor-pointer">
-                <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
-                Flag Issue
-              </DropdownMenuItem>
-              <DropdownMenuItem className="gap-2 rounded-lg text-sm cursor-pointer">
-                <History className="h-3.5 w-3.5 text-zinc-500" />
-                View History
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ),
+              <DropdownMenuContent align="end" className="w-40 bg-white border-zinc-200 rounded-xl p-1">
+                <DropdownMenuItem 
+                  className="gap-2 rounded-lg text-sm cursor-pointer"
+                  onClick={async () => {
+                    toast.promise(verifyAsset(asset.id), {
+                      loading: 'Verifying...',
+                      success: 'Asset verified',
+                      error: 'Failed to verify'
+                    });
+                  }}
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                  Verify
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className="gap-2 rounded-lg text-sm cursor-pointer"
+                  onClick={async () => {
+                    const reason = prompt("Enter reason for missing asset:");
+                    if(reason) {
+                      toast.promise(markMissing(asset.id, reason), {
+                        loading: 'Updating...',
+                        success: 'Asset marked missing',
+                        error: 'Failed to update'
+                      });
+                    }
+                  }}
+                >
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+                  Mark Missing
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className="gap-2 rounded-lg text-sm cursor-pointer"
+                  onClick={async () => {
+                    const details = prompt("Enter damage details:");
+                    if(details) {
+                      toast.promise(markDamaged(asset.id, details), {
+                        loading: 'Updating...',
+                        success: 'Asset marked damaged',
+                        error: 'Failed to update'
+                      });
+                    }
+                  }}
+                >
+                  <AlertTriangle className="h-3.5 w-3.5 text-red-600" />
+                  Mark Damaged
+                </DropdownMenuItem>
+                <DropdownMenuItem className="gap-2 rounded-lg text-sm cursor-pointer">
+                  <History className="h-3.5 w-3.5 text-zinc-500" />
+                  View History
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          );
+        },
         size: 48,
       },
     ],
-    []
+    [verifyAsset, markMissing, markDamaged]
   );
 
   const table = useReactTable({
@@ -235,8 +297,8 @@ export function VerificationTable({ data }: VerificationTableProps) {
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 px-6 pb-4">
         <SearchBar
           placeholder="Search assets, tags, employees..."
-          value={globalFilter}
-          onChange={setGlobalFilter}
+          value={searchQuery}
+          onChange={setSearchQuery}
           className="w-full sm:w-72"
         />
         <FilterDropdown label="Department" options={departments} value={departmentFilter} onChange={setDepartmentFilter} />
@@ -282,8 +344,18 @@ export function VerificationTable({ data }: VerificationTableProps) {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={columns.length} className="h-32 text-center text-zinc-500">
-                    No assets found matching your filters.
+                  <TableCell colSpan={columns.length} className="h-64 text-center">
+                    <div className="flex flex-col items-center justify-center space-y-3">
+                      <div className="h-12 w-12 rounded-full bg-zinc-100 flex items-center justify-center">
+                        <svg className="w-6 h-6 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                      </div>
+                      <p className="text-zinc-500 font-medium text-sm">No assets match your search or filters.</p>
+                      <Button variant="outline" size="sm" onClick={() => { setSearchQuery(''); setDepartmentFilter('all'); setStatusFilter('all'); }}>
+                        Clear all filters
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               )}

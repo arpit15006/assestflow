@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { SectionCard } from "@/shared/components";
 import {
   Table,
@@ -12,12 +13,15 @@ import {
 import type { IdleAsset } from "@/shared/types";
 import { formatDate } from "@/shared/lib/utils";
 import { cn } from "@/lib/utils";
+import { AssetDetailsDialog } from "./report-dialogs";
 
 interface IdleAssetsTableProps {
   data: IdleAsset[];
 }
 
 export function IdleAssetsTable({ data }: IdleAssetsTableProps) {
+  const [selectedAsset, setSelectedAsset] = useState<IdleAsset | null>(null);
+
   return (
     <SectionCard title="Idle Assets" subtitle="Assets with no recent usage" noPadding>
       <div className="border-t border-zinc-200">
@@ -31,19 +35,32 @@ export function IdleAssetsTable({ data }: IdleAssetsTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.map((asset) => (
-              <TableRow key={asset.id} className="border-zinc-200/50 hover:bg-zinc-50/40">
-                <TableCell className="py-3 pl-6 text-sm font-medium text-zinc-950">{asset.name}</TableCell>
-                <TableCell className="py-3 text-sm text-zinc-500">{asset.department}</TableCell>
-                <TableCell className="py-3 text-sm text-zinc-500">{formatDate(asset.lastUsed)}</TableCell>
-                <TableCell className={cn("py-3 pr-6 text-sm font-medium text-right", asset.daysIdle > 60 ? "text-red-600" : asset.daysIdle > 30 ? "text-amber-600" : "text-zinc-500")}>
-                  {asset.daysIdle}d
-                </TableCell>
-              </TableRow>
-            ))}
+            {data.map((asset) => {
+              let severityClass = "bg-zinc-100 text-zinc-600";
+              if (asset.daysIdle > 60) severityClass = "bg-red-50 text-red-600 ring-1 ring-red-200";
+              else if (asset.daysIdle > 30) severityClass = "bg-amber-50 text-amber-600 ring-1 ring-amber-200";
+
+              return (
+                <TableRow 
+                  key={asset.id} 
+                  className="border-zinc-200/50 hover:bg-zinc-50/40 cursor-pointer transition-colors"
+                  onClick={() => setSelectedAsset(asset)}
+                >
+                  <TableCell className="py-3 pl-6 text-sm font-medium text-zinc-950">{asset.name}</TableCell>
+                  <TableCell className="py-3 text-sm text-zinc-500">{asset.department}</TableCell>
+                  <TableCell className="py-3 text-sm text-zinc-500">{formatDate(asset.lastUsed)}</TableCell>
+                  <TableCell className="py-3 pr-6 text-sm font-medium text-right">
+                    <span className={cn("px-2 py-1 rounded-md text-xs font-medium inline-block", severityClass)}>
+                      {asset.daysIdle} days
+                    </span>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>
+      <AssetDetailsDialog asset={selectedAsset} onClose={() => setSelectedAsset(null)} />
     </SectionCard>
   );
 }

@@ -10,6 +10,8 @@ import { ArrowUpRight, ArrowDownRight, Minus } from "lucide-react";
 
 interface StatCardProps extends StatCardData {
   className?: string;
+  onClick?: () => void;
+  isActive?: boolean;
 }
 
 export function StatCard({
@@ -20,6 +22,8 @@ export function StatCard({
   icon: Icon,
   trend = "neutral",
   className,
+  onClick,
+  isActive,
 }: StatCardProps) {
   const trendConfig = {
     up: {
@@ -44,8 +48,11 @@ export function StatCard({
   return (
     <motion.div variants={staggerItem}>
       <Card
+        onClick={onClick}
         className={cn(
-          "group relative overflow-hidden border-zinc-200 bg-white hover:bg-white/80 transition-all duration-300 hover:border-zinc-200 rounded-2xl",
+          "group relative overflow-hidden border-zinc-200 bg-white transition-all duration-300 rounded-2xl",
+          onClick && "cursor-pointer hover:shadow-md hover:-translate-y-1",
+          isActive ? "ring-2 ring-primary border-primary/50" : "hover:border-zinc-300",
           className
         )}
       >

@@ -9,7 +9,11 @@ interface DiscrepancySummaryProps {
   timeline: TimelineEvent[];
 }
 
+import { useAuditStore } from "../store/audit-store";
+
 export function DiscrepancySummary({ stats, timeline }: DiscrepancySummaryProps) {
+  const setFilter = useAuditStore((s) => s.setFilter);
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Discrepancy Cards */}
@@ -22,6 +26,7 @@ export function DiscrepancySummary({ stats, timeline }: DiscrepancySummaryProps)
             description="Assets not found at expected locations"
             color="text-red-600"
             bgColor="bg-danger-muted"
+            onClick={() => setFilter("missing")}
           />
           <DiscrepancyRow
             icon={Wrench}
@@ -30,6 +35,7 @@ export function DiscrepancySummary({ stats, timeline }: DiscrepancySummaryProps)
             description="Assets with reported physical damage"
             color="text-amber-600"
             bgColor="bg-warning-muted"
+            onClick={() => setFilter("damaged")}
           />
           <DiscrepancyRow
             icon={AlertTriangle}
@@ -38,6 +44,7 @@ export function DiscrepancySummary({ stats, timeline }: DiscrepancySummaryProps)
             description="Assets found at different locations"
             color="text-info"
             bgColor="bg-info-muted"
+            onClick={() => setFilter("location_mismatch")}
           />
         </div>
       </SectionCard>
@@ -57,6 +64,7 @@ function DiscrepancyRow({
   description,
   color,
   bgColor,
+  onClick,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
@@ -64,9 +72,13 @@ function DiscrepancyRow({
   description: string;
   color: string;
   bgColor: string;
+  onClick?: () => void;
 }) {
   return (
-    <div className="flex items-center gap-4 p-4 rounded-xl bg-zinc-50/50 border border-zinc-200/50 hover:border-zinc-200 transition-colors">
+    <div 
+      onClick={onClick}
+      className="flex items-center gap-4 p-4 rounded-xl bg-zinc-50/50 border border-zinc-200/50 hover:border-zinc-200 transition-colors cursor-pointer hover:bg-zinc-100"
+    >
       <div className={`rounded-xl ${bgColor} p-2.5`}>
         <Icon className={`h-4 w-4 ${color}`} />
       </div>

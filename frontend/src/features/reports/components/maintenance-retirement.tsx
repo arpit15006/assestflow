@@ -1,22 +1,27 @@
 "use client";
 
+import { useState } from "react";
 import { SectionCard, StatusBadge } from "@/shared/components";
 import { formatDate } from "@/shared/lib/utils";
 import type { MaintenanceItem, RetirementAsset } from "@/shared/types";
 import { Wrench, CalendarClock } from "lucide-react";
+import { AssetDetailsDialog, MaintenanceDetailsDialog } from "./report-dialogs";
 
 interface MaintenanceDueListProps {
   data: MaintenanceItem[];
 }
 
 export function MaintenanceDueList({ data }: MaintenanceDueListProps) {
+  const [selectedItem, setSelectedItem] = useState<MaintenanceItem | null>(null);
+
   return (
     <SectionCard title="Maintenance Due" subtitle="Upcoming & overdue maintenance tasks">
       <div className="space-y-3">
         {data.map((item) => (
           <div
             key={item.id}
-            className="flex items-center gap-4 p-3.5 rounded-xl bg-zinc-50/50 border border-zinc-200/50 hover:border-zinc-200 transition-colors"
+            onClick={() => setSelectedItem(item)}
+            className="flex items-center gap-4 p-3.5 rounded-xl bg-zinc-50/50 border border-zinc-200/50 hover:border-zinc-200 cursor-pointer transition-colors"
           >
             <div className="rounded-lg bg-warning-muted p-2">
               <Wrench className="h-4 w-4 text-amber-600" />
@@ -29,6 +34,7 @@ export function MaintenanceDueList({ data }: MaintenanceDueListProps) {
           </div>
         ))}
       </div>
+      <MaintenanceDetailsDialog item={selectedItem} onClose={() => setSelectedItem(null)} />
     </SectionCard>
   );
 }
@@ -38,13 +44,16 @@ interface RetirementAssetsListProps {
 }
 
 export function RetirementAssetsList({ data }: RetirementAssetsListProps) {
+  const [selectedAsset, setSelectedAsset] = useState<RetirementAsset | null>(null);
+
   return (
     <SectionCard title="Near Retirement" subtitle="Assets approaching end of lifecycle">
       <div className="space-y-3">
         {data.map((asset) => (
           <div
             key={asset.id}
-            className="flex items-center gap-4 p-3.5 rounded-xl bg-zinc-50/50 border border-zinc-200/50 hover:border-zinc-200 transition-colors"
+            onClick={() => setSelectedAsset(asset)}
+            className="flex items-center gap-4 p-3.5 rounded-xl bg-zinc-50/50 border border-zinc-200/50 hover:border-zinc-200 cursor-pointer transition-colors"
           >
             <div className="rounded-lg bg-info-muted p-2">
               <CalendarClock className="h-4 w-4 text-info" />
@@ -59,6 +68,7 @@ export function RetirementAssetsList({ data }: RetirementAssetsListProps) {
           </div>
         ))}
       </div>
+      <AssetDetailsDialog asset={selectedAsset} onClose={() => setSelectedAsset(null)} />
     </SectionCard>
   );
 }

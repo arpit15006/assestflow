@@ -14,7 +14,17 @@ import {
   CheckCircle2,
   ArrowRightLeft,
   PackagePlus,
+  MoreVertical,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/shared/ui/dropdown-menu";
+import { Button } from "@/components/ui/Button";
+import { toast } from "sonner";
+import { useNotificationsStore } from "../store/notifications-store";
 
 const typeConfig: Record<NotificationType, { icon: React.ComponentType<{ className?: string }>; color: string; bgColor: string }> = {
   booking: { icon: CalendarDays, color: "text-info", bgColor: "bg-info-muted" },
@@ -34,11 +44,38 @@ const priorityColors: Record<string, string> = {
 
 interface NotificationCardProps {
   notification: Notification;
-  onMarkRead?: (id: string) => void;
+  onClickDetails: (n: Notification) => void;
 }
 
-export function NotificationCard({ notification, onMarkRead }: NotificationCardProps) {
+export function NotificationCard({ notification, onClickDetails }: NotificationCardProps) {
   const { icon: TypeIcon, color, bgColor } = typeConfig[notification.type];
+  const { markRead, deleteNotification } = useNotificationsStore();
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Don't trigger if clicking dropdown
+    if ((e.target as HTMLElement).closest('[data-dropdown]')) return;
+    
+    if (!notification.read) {
+      markRead(notification.id);
+    }
+    onClickDetails(notification);
+  };
+
+  const handleDropdownAction = (e: React.MouseEvent, action: string) => {
+    e.stopPropagation();
+    if (action === 'delete') {
+      deleteNotification(notification.id);
+      toast.success("Notification deleted");
+    } else if (action === 'archive') {
+      deleteNotification(notification.id);
+      toast.success("Notification archived");
+    } else if (action === 'copy') {
+      navigator.clipboard.writeText(`Notification: ${notification.title}`);
+      toast.success("Link copied to clipboard");
+    } else if (action === 'details') {
+      onClickDetails(notification);
+    }
+  };
 
   return (
     <motion.div
@@ -56,12 +93,37 @@ export function NotificationCard({ notification, onMarkRead }: NotificationCardP
             : "bg-zinc-100 hover:bg-zinc-50",
           priorityColors[notification.priority] || "border-l-transparent"
         )}
-        onClick={() => !notification.read && onMarkRead?.(notification.id)}
+        onClick={handleCardClick}
         role="article"
-        aria-label={`${notification.read ? "Read" : "Unread"} notification: ${notification.title}`}
       >
-        <CardContent className="p-4">
-          <div className="flex items-start gap-3.5">
+        <CardContent className="p-4 relative">
+          <div className="absolute top-4 right-4" data-dropdown>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-zinc-500 hover:text-zinc-900 rounded-lg">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                }
+              />
+              <DropdownMenuContent align="end" className="w-40 bg-white border-zinc-200 rounded-xl p-1">
+                <DropdownMenuItem onClick={(e) => handleDropdownAction(e, 'details')} className="rounded-lg text-sm text-zinc-600 focus:bg-zinc-50 cursor-pointer">
+                  View Details
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => handleDropdownAction(e, 'archive')} className="rounded-lg text-sm text-zinc-600 focus:bg-zinc-50 cursor-pointer">
+                  Archive
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => handleDropdownAction(e, 'copy')} className="rounded-lg text-sm text-zinc-600 focus:bg-zinc-50 cursor-pointer">
+                  Copy Link
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => handleDropdownAction(e, 'delete')} className="rounded-lg text-sm text-red-600 focus:bg-red-50 focus:text-red-700 cursor-pointer">
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          <div className="flex items-start gap-3.5 pr-10">
             {/* Icon */}
             <div className={cn("rounded-xl p-2.5 flex-shrink-0 mt-0.5", bgColor)}>
               <TypeIcon className={cn("h-4 w-4", color)} />
@@ -69,10 +131,10 @@ export function NotificationCard({ notification, onMarkRead }: NotificationCardP
 
             {/* Content */}
             <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-2">
+              <div className="flex items-start gap-2">
                 <div className="min-w-0">
                   <p className={cn(
-                    "text-sm leading-snug",
+                    "text-sm leading-snug pr-4",
                     notification.read ? "font-medium text-zinc-950" : "font-semibold text-zinc-950"
                   )}>
                     {notification.title}

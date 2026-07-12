@@ -1,20 +1,28 @@
 "use client";
 
+import { useState } from "react";
 import { SectionCard } from "@/shared/components";
 import { motion } from "framer-motion";
 import { progressAnimation } from "@/shared/lib/animations";
 import type { TopAsset } from "@/shared/types";
+import { AssetDetailsDialog } from "./report-dialogs";
 
 interface TopAssetsListProps {
   data: TopAsset[];
 }
 
 export function TopAssetsList({ data }: TopAssetsListProps) {
+  const [selectedAsset, setSelectedAsset] = useState<TopAsset | null>(null);
+
   return (
     <SectionCard title="Top Used Assets" subtitle="Highest utilization rate this period">
       <div className="space-y-4">
         {data.map((asset, index) => (
-          <div key={asset.id} className="space-y-2">
+          <div 
+            key={asset.id} 
+            className="space-y-2 p-2 rounded-xl hover:bg-zinc-50/80 cursor-pointer transition-colors"
+            onClick={() => setSelectedAsset(asset)}
+          >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3 min-w-0">
                 <span className="text-xs text-zinc-500 font-mono w-5 text-right flex-shrink-0">
@@ -44,6 +52,7 @@ export function TopAssetsList({ data }: TopAssetsListProps) {
           </div>
         ))}
       </div>
+      <AssetDetailsDialog asset={selectedAsset} onClose={() => setSelectedAsset(null)} />
     </SectionCard>
   );
 }
