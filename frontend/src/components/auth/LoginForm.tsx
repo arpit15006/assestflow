@@ -106,7 +106,6 @@ export function LoginForm({ onSuccess, loading, setLoading }: LoginFormProps) {
           placeholder="name@company.com"
           autoComplete="email"
           disabled={loading || submitSuccess}
-          error={!!errors.email}
           aria-invalid={errors.email ? "true" : "false"}
           aria-describedby={errors.email ? "email-error" : undefined}
           {...register("email")}
@@ -144,7 +143,6 @@ export function LoginForm({ onSuccess, loading, setLoading }: LoginFormProps) {
           placeholder="••••••••"
           autoComplete="current-password"
           disabled={loading || submitSuccess}
-          error={!!errors.password}
           aria-invalid={errors.password ? "true" : "false"}
           aria-describedby={errors.password ? "password-error" : undefined}
           {...register("password")}

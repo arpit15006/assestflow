@@ -2,12 +2,10 @@ import * as React from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { Input } from "../ui/Input";
 
-export interface PasswordInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  error?: boolean | string;
-}
+export interface PasswordInputProps extends React.InputHTMLAttributes<HTMLInputElement> {}
 
 const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputProps>(
-  ({ className = "", error, ...props }, ref) => {
+  ({ className = "", ...props }, ref) => {
     const [showPassword, setShowPassword] = React.useState(false);
 
     const togglePasswordVisibility = () => {
@@ -20,7 +18,6 @@ const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputProps>(
           type={showPassword ? "text" : "password"}
           className={`pr-10 ${className}`}
           ref={ref}
-          error={error}
           {...props}
         />
         <button
