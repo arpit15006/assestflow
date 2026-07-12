@@ -7,6 +7,8 @@ const router = Router();
 
 router.use(authenticate);
 
+router.get('/active', requirePermission(PERMISSIONS.audit.conduct), auditController.getActiveAudit);
+router.patch('/active/items/:assetId', requirePermission(PERMISSIONS.audit.conduct), auditController.updateItemStatus);
 router.get('/', requirePermission(PERMISSIONS.audit.conduct), auditController.list);
 router.post('/', requirePermission(PERMISSIONS.audit.create), auditController.create);
 router.post('/:id/close', requirePermission(PERMISSIONS.audit.close), auditController.close);

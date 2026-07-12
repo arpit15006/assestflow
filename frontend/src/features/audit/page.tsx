@@ -10,7 +10,7 @@ import { AuditOverviewCard } from "./components/audit-overview-card";
 import { VerificationTable } from "./components/verification-table";
 import { DiscrepancySummary } from "./components/discrepancy-summary";
 import { useAuditStore } from "./store/audit-store";
-import { AuditAPI } from "./services/mock-api";
+import { auditApi } from "@/lib/api/audit";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -61,7 +61,7 @@ export default function AuditPage() {
     setIsGenerating(true);
     toast.info("Generating report...");
     try {
-      await AuditAPI.generateReport();
+      await auditApi.generateReport();
       toast.success("Report generated and downloaded");
     } catch (e) {
       toast.error("Failed to generate report");

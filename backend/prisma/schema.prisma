@@ -72,6 +72,7 @@ enum AuditStatus {
 }
 
 enum AuditItemVerification {
+  PENDING
   VERIFIED
   MISSING
   DAMAGED
@@ -271,7 +272,7 @@ model AuditItem {
   auditCycle   AuditCycle            @relation(fields: [auditCycleId], references: [id], onDelete: Cascade)
   assetId      String
   asset        Asset                 @relation(fields: [assetId], references: [id], onDelete: Cascade)
-  verification AuditItemVerification @default(VERIFIED)
+  verification AuditItemVerification @default(PENDING)
   notes        String?
   updatedAt    DateTime              @updatedAt
 }

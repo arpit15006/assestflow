@@ -154,7 +154,7 @@ export default function ReportsPage() {
         />
         <StatCard 
           title="Maintenance Cost" 
-          value={`$${kpis.maintenanceCost.toLocaleString()}`} 
+          value={`₹${kpis.maintenanceCost.toLocaleString()}`} 
           change={-8.3} 
           changeLabel="vs last month" 
           icon={DollarSign} 

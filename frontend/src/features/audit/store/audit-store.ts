@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { AuditAsset, AuditOverview, TimelineEvent } from "@/shared/types";
-import { AuditAPI } from "../services/mock-api";
+import { auditApi } from "@/lib/api/audit";
 
 interface AuditState {
   overview: AuditOverview | null;
@@ -27,100 +27,56 @@ export const useAuditStore = create<AuditState>((set, get) => ({
 
   fetchAudit: async () => {
     set({ isLoading: true });
-    const data = await AuditAPI.getAudit();
-    set({ overview: data.overview, assets: data.assets, timeline: data.timeline, isLoading: false });
+    try {
+      const data = await auditApi.getActive();
+      if (data) {
+        set({ overview: data.overview, assets: data.assets, timeline: data.timeline });
+      }
+    } catch (e) {
+      console.error("Failed to fetch active audit", e);
+    } finally {
+      set({ isLoading: false });
+    }
   },
 
   verifyAsset: async (id, notes) => {
-    const updated = await AuditAPI.verifyAsset(id, notes);
-    const state = get();
-    const assets = state.assets.map(a => a.id === id ? updated : a);
-    const event: TimelineEvent = {
-      id: Date.now().toString(),
-      title: "Asset Verified",
-      description: `${updated.name} verified by Current User`,
-      timestamp: new Date().toISOString(),
-      type: "complete",
-      actor: "Current User"
-    };
-    
-    // Recalculate stats
-    const stats = { verified: 0, missing: 0, damaged: 0, pending: 0 };
-    assets.forEach(a => {
-      if(a.verificationStatus === "verified") stats.verified++;
-      else if(a.verificationStatus === "missing") stats.missing++;
-      else if(a.verificationStatus === "damaged") stats.damaged++;
-      else stats.pending++;
-    });
-
-    set({ 
-      assets, 
-      timeline: [event, ...state.timeline],
-      overview: state.overview ? { ...state.overview, stats } : null
-    });
+    try {
+      await auditApi.updateItem(id, { verification: "VERIFIED", notes });
+      await get().fetchAudit();
+    } catch (e) {
+      console.error("Failed to verify asset", e);
+      throw e;
+    }
   },
 
   markMissing: async (id, reason) => {
-    const updated = await AuditAPI.markMissing(id, reason);
-    const state = get();
-    const assets = state.assets.map(a => a.id === id ? updated : a);
-    const event: TimelineEvent = {
-      id: Date.now().toString(),
-      title: "Asset Missing",
-      description: `${updated.name} marked missing: ${reason}`,
-      timestamp: new Date().toISOString(),
-      type: "flag",
-      actor: "Current User"
-    };
-    
-    // Recalculate stats
-    const stats = { verified: 0, missing: 0, damaged: 0, pending: 0 };
-    assets.forEach(a => {
-      if(a.verificationStatus === "verified") stats.verified++;
-      else if(a.verificationStatus === "missing") stats.missing++;
-      else if(a.verificationStatus === "damaged") stats.damaged++;
-      else stats.pending++;
-    });
-
-    set({ 
-      assets, 
-      timeline: [event, ...state.timeline],
-      overview: state.overview ? { ...state.overview, stats } : null
-    });
+    try {
+      await auditApi.updateItem(id, { verification: "MISSING", notes: reason });
+      await get().fetchAudit();
+    } catch (e) {
+      console.error("Failed to mark asset missing", e);
+      throw e;
+    }
   },
 
   markDamaged: async (id, details) => {
-    const updated = await AuditAPI.markDamaged(id, details);
-    const state = get();
-    const assets = state.assets.map(a => a.id === id ? updated : a);
-    const event: TimelineEvent = {
-      id: Date.now().toString(),
-      title: "Asset Damaged",
-      description: `${updated.name} marked damaged: ${details}`,
-      timestamp: new Date().toISOString(),
-      type: "damage",
-      actor: "Current User"
-    };
-    
-    // Recalculate stats
-    const stats = { verified: 0, missing: 0, damaged: 0, pending: 0 };
-    assets.forEach(a => {
-      if(a.verificationStatus === "verified") stats.verified++;
-      else if(a.verificationStatus === "missing") stats.missing++;
-      else if(a.verificationStatus === "damaged") stats.damaged++;
-      else stats.pending++;
-    });
-
-    set({ 
-      assets, 
-      timeline: [event, ...state.timeline],
-      overview: state.overview ? { ...state.overview, stats } : null
-    });
+    try {
+      await auditApi.updateItem(id, { verification: "DAMAGED", notes: details });
+      await get().fetchAudit();
+    } catch (e) {
+      console.error("Failed to mark asset damaged", e);
+      throw e;
+    }
   },
 
   closeAudit: async () => {
-    const closed = await AuditAPI.closeAudit();
-    set({ overview: closed });
+    try {
+      await auditApi.close("active");
+      await get().fetchAudit();
+    } catch (e) {
+      console.error("Failed to close audit", e);
+      throw e;
+    }
   },
 
   setFilter: (f) => set({ filter: f }),
