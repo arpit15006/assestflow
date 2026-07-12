@@ -88,7 +88,11 @@ app.get('/health', async (req, res) => {
 // Global Error Handler
 app.use(errorHandler);
 
-const PORT = env.PORT;
-httpServer.listen(PORT, () => {
-  logger.info(`🚀 Server running in ${env.NODE_ENV} mode on port ${PORT}`);
-});
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  const PORT = env.PORT;
+  httpServer.listen(PORT, () => {
+    logger.info(`🚀 Server running in ${env.NODE_ENV} mode on port ${PORT}`);
+  });
+}
+
+export default app;

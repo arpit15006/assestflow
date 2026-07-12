@@ -92,8 +92,15 @@ export function DashboardPageClient() {
         </div>
         <div className="lg:col-span-5 flex flex-col space-y-6">
           <NotificationsPanel />
-          <UpcomingTasks />
         </div>
+      </div>
+
+      {/* 6. Today's Schedule & Tasks (Full Width) */}
+      <div className="space-y-3">
+        <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+          Scheduled Tasks
+        </h3>
+        <UpcomingTasks />
       </div>
 
       {/* Register Asset Dialog (reuse from assets feature) */}

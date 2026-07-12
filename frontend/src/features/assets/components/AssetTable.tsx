@@ -82,11 +82,10 @@ export function AssetTable({ data, onAction, searchQuery, filters }: AssetTableP
 
   const getInitials = (name: string) => {
     if (!name || name === "--") return "AS";
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase();
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return "AS";
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   };
 
   const columns = React.useMemo(

@@ -15,7 +15,7 @@ export function Timeline({ events, className }: TimelineProps) {
       {events.map((event, index) => (
         <div key={event.id} className="relative flex gap-4 pb-6 last:pb-0">
           {index < events.length - 1 && (
-            <div className="absolute left-[11px] top-6 bottom-0 w-px bg-border/50" />
+            <div className="absolute left-[4px] top-6 bottom-0 w-px bg-border/50" />
           )}
           <div className="relative z-10 flex-shrink-0 mt-1.5">
             <div className="h-[9px] w-[9px] rounded-full bg-primary ring-4 ring-background" />

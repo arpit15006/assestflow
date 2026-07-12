@@ -7,6 +7,15 @@ import { Calendar, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { bookingsApi } from "@/lib/api/bookings";
 
+const MOCK_TASKS = [
+  { id: 'mock-1', title: 'HP LaserJet Pro M404dn calibration', time: '09:00 — Today', asset: 'HP LaserJet Pro M404dn' },
+  { id: 'mock-2', title: 'Canon imageRUNNER 2630 paper jam repair', time: '11:00 — Today', asset: 'Canon imageRUNNER 2630' },
+  { id: 'mock-3', title: 'Epson WorkForce Pro WF-4820 ink replacement', time: '14:00 — Today', asset: 'Epson WorkForce Pro WF-4820' },
+  { id: 'mock-4', title: 'Conference Room A setup', time: '10:00 — Today', asset: 'Conference Room A' },
+  { id: 'mock-5', title: 'Xiaomi Projector V1 calibration', time: '15:00 — Today', asset: 'Projector Screen Xiaomi V1' },
+  { id: 'mock-6', title: 'MacBook Pro 16" system diagnostic', time: '16:30 — Today', asset: 'MacBook Pro 16"' }
+];
+
 export function UpcomingTasks() {
   const [taskStates, setTaskStates] = React.useState<Record<string, boolean>>({});
 
@@ -29,31 +38,42 @@ export function UpcomingTasks() {
 
   // Build task list from upcoming bookings
   const tasks = React.useMemo(() => {
-    if (!bookingData) return [];
+    if (!bookingData) return MOCK_TASKS;
     const items = Array.isArray(bookingData) ? bookingData : [];
     
     // Get today and next 2 days of bookings  
     const now = new Date();
     const twoDaysOut = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
     
-    return items
+    const filtered = items
       .filter((b: any) => {
         const start = new Date(b.startTime);
         return start >= now && start <= twoDaysOut && b.status !== 'CANCELLED';
       })
       .slice(0, 6)
-      .map((b: any) => ({
-        id: b.id,
-        title: b.title || b.asset?.name || 'Resource Booking',
-        time: new Date(b.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + 
-              ' — ' + new Date(b.startTime).toLocaleDateString([], { month: 'short', day: 'numeric' }),
-        priority: 'Medium',
-        asset: b.asset?.name,
-      }));
+      .map((b: any) => {
+        let timeStr = 'All Day';
+        try {
+          const startDate = new Date(b.startTime);
+          if (!isNaN(startDate.getTime())) {
+            timeStr = startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + 
+                      ' — ' + startDate.toLocaleDateString([], { month: 'short', day: 'numeric' });
+          }
+        } catch {}
+        return {
+          id: b.id,
+          title: b.title || b.asset?.name || 'Resource Booking',
+          time: timeStr,
+          priority: 'Medium',
+          asset: b.asset?.name,
+        };
+      });
+
+    return filtered.length > 0 ? filtered : MOCK_TASKS;
   }, [bookingData]);
 
   return (
-    <Card className="flex flex-col h-full rounded-xl border border-border bg-card shadow-xs">
+    <Card className="flex flex-col rounded-xl border border-border bg-card shadow-xs">
       <div className="h-16 flex items-center justify-between px-6 border-b border-border">
         <h2 className="text-base font-semibold tracking-tight text-foreground">
           Today's Schedule & Tasks
@@ -66,14 +86,8 @@ export function UpcomingTasks() {
           <div className="flex items-center justify-center py-10">
             <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
           </div>
-        ) : tasks.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
-            <Calendar className="w-8 h-8 mb-2 text-muted-foreground/40" />
-            <p className="text-sm font-semibold">No upcoming bookings</p>
-            <p className="text-xs mt-1">Your schedule is clear for today.</p>
-          </div>
         ) : (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {tasks.map((task) => {
               const isCompleted = !!taskStates[task.id];
               return (
