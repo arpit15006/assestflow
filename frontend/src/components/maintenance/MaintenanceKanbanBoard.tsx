@@ -70,7 +70,7 @@ export function MaintenanceKanbanBoard({ requests, onCardClick, onCardDrop }: Ma
   };
 
   return (
-    <div className="w-full flex gap-4 overflow-x-auto pb-4 pt-2 snap-x h-full min-h-0 items-stretch">
+    <div className="w-full flex gap-5 overflow-x-auto pb-4 pt-2 snap-x h-full min-h-0 items-stretch [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-zinc-100/50 [&::-webkit-scrollbar-thumb]:bg-zinc-300 [&::-webkit-scrollbar-thumb]:rounded-full">
       {COLUMNS.map(column => {
         const columnRequests = groupedRequests[column.id] || [];
         const isOver = dragOverCol === column.id;
@@ -81,20 +81,20 @@ export function MaintenanceKanbanBoard({ requests, onCardClick, onCardDrop }: Ma
             onDragOver={(e) => handleDragOver(e, column.id)}
             onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, column.id)}
-            className={`flex-shrink-0 w-72 flex flex-col rounded-2xl border transition-all duration-200 snap-center h-full min-h-0 select-none ${getColumnColor(column.id, isOver)}`}
+            className={`flex-shrink-0 w-[300px] flex flex-col rounded-2xl border transition-all duration-200 snap-center h-full min-h-0 select-none ${getColumnColor(column.id, isOver)}`}
           >
             {/* Column Header */}
-            <div className="px-4 py-3.5 border-b border-black/5 flex items-center justify-between shrink-0 bg-white/40">
+            <div className="px-5 py-4 border-b border-black/5 flex items-center justify-between shrink-0 bg-white/40">
               <h3 className={`font-bold tracking-tight text-xs uppercase font-heading ${getColumnHeaderColor(column.id)}`}>
                 {column.title}
               </h3>
-              <span className="px-2 py-0.5 bg-white rounded-full text-[10px] font-bold text-zinc-500 shadow-xs border border-zinc-200">
+              <span className="px-2 py-0.5 bg-white rounded-full text-[10px] font-bold text-zinc-500 shadow-3xs border border-zinc-200">
                 {columnRequests.length}
               </span>
             </div>
 
             {/* Column Content */}
-            <div className="flex-1 p-3 flex flex-col gap-3 overflow-y-auto min-h-0 bg-transparent">
+            <div className="flex-1 p-4 flex flex-col gap-4 overflow-y-auto min-h-0 bg-transparent [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-200/80 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-300">
               {columnRequests.map(request => (
                 <MaintenanceCard 
                   key={request.id} 

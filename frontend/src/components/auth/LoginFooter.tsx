@@ -10,25 +10,20 @@ interface LoginFooterProps {
 
 export function LoginFooter({ onCreateAccount, loading }: LoginFooterProps) {
   return (
-    <div className="flex flex-col space-y-6">
-      <Separator />
+    <div className="flex flex-col space-y-4 font-sans select-none">
+      <Separator className="bg-zinc-200/60" />
 
-      <div className="space-y-4">
-        <div className="text-center">
-          <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-            New to AssetFlow?
-          </span>
-        </div>
-
-        {/* Informational Disclaimer Box */}
-        <div className="flex items-start gap-3 rounded-lg border border-blue-100 bg-blue-50/40 p-4 text-left text-zinc-600 shadow-2xs">
-          <Info className="h-5 w-5 shrink-0 text-blue-600" />
-          <div className="space-y-1">
-            <p className="text-xs font-semibold text-zinc-800">
-              Employee-only Registration
+      <div className="space-y-3.5">
+        
+        {/* Safe Registration Note */}
+        <div className="flex items-start gap-3 rounded-xl border border-zinc-200/60 bg-zinc-50/60 p-3.5 text-left text-zinc-600">
+          <Info className="h-4.5 w-4.5 shrink-0 text-zinc-500 mt-0.5" />
+          <div className="space-y-0.5">
+            <p className="text-xs font-bold text-zinc-900 leading-tight">
+              Enterprise Access Restrictions
             </p>
-            <p className="text-[11px] leading-normal text-zinc-500">
-              New signups are registered as standard Employee accounts. Role elevations (e.g. Department Head, Asset Manager) are assigned by an Administrator.
+            <p className="text-[10px] leading-normal text-zinc-500 font-medium">
+              Self-registered accounts start with Employee permissions. Administrator approval is required for role promotions.
             </p>
           </div>
         </div>
@@ -36,11 +31,11 @@ export function LoginFooter({ onCreateAccount, loading }: LoginFooterProps) {
         <Button
           type="button"
           variant="outline"
-          className="w-full font-medium"
+          className="w-full font-bold py-2 px-4 rounded-xl border border-zinc-200 hover:bg-zinc-50 active:scale-[0.99] transition-all text-xs"
           onClick={onCreateAccount}
           disabled={loading}
         >
-          Create Account
+          Create Employee Account
         </Button>
       </div>
     </div>

@@ -5,7 +5,14 @@ import { StatCard } from "./StatCard";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { dashboardApi } from "@/lib/api/dashboard";
-import { DashboardStat } from "@/lib/mock/dashboard";
+
+type DashboardStat = { 
+  title: string; 
+  value: number; 
+  description: string; 
+  iconName: "Package" | "UserCheck" | "Wrench" | "Calendar" | "Repeat" | "Clock"; 
+  trend?: string; 
+};
 
 export function KPIGrid() {
   const { user } = useAuth();

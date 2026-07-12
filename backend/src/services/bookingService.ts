@@ -19,7 +19,15 @@ export const bookingService = {
     const conflict = await bookingRepository.findConflict(data.assetId, start, end);
     if (conflict) throw Object.assign(new Error('Booking conflicts with an existing reservation'), { status: 409 });
 
-    const booking = await bookingRepository.create({ assetId: data.assetId, userId, startTime: start, endTime: end });
+    const booking = await bookingRepository.create({ 
+      assetId: data.assetId, 
+      userId, 
+      startTime: start, 
+      endTime: end,
+      title: (data as any).title,
+      purpose: (data as any).purpose,
+      attendees: (data as any).attendees,
+    });
     return booking;
   },
 

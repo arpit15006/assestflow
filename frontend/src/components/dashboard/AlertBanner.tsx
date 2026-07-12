@@ -1,15 +1,27 @@
 "use client";
 
 import * as React from "react";
-import { AlertCircle, ArrowRight, CheckCircle2 } from "lucide-react";
+import { AlertCircle, ArrowRight } from "lucide-react";
 import { Button } from "../ui/Button";
-import { mockNotifications } from "@/lib/mock/notifications";
 import { useToast } from "@/components/ui/Toast";
+import { useQuery } from "@tanstack/react-query";
+import { notificationsApi } from "@/lib/api/notifications";
 
 export function AlertBanner() {
   const { toast } = useToast();
   const [dismissed, setDismissed] = React.useState(false);
-  const overdueAlert = mockNotifications.find((n) => n.type === "OVERDUE");
+
+  const { data: notifData } = useQuery({
+    queryKey: ["notifications-alert-banner"],
+    queryFn: () => notificationsApi.list(1, 20),
+  });
+
+  const notifications = notifData?.notifications || (Array.isArray(notifData) ? notifData : []);
+  
+  // Find overdue / important unread notification to show as banner
+  const overdueAlert = notifications.find((n: any) => 
+    !n.isRead && (n.type === 'MAINTENANCE' || n.title?.toLowerCase().includes('overdue') || n.title?.toLowerCase().includes('due'))
+  );
 
   if (!overdueAlert || dismissed) return null;
 
@@ -17,7 +29,7 @@ export function AlertBanner() {
     toast({
       type: "success",
       title: "Reminder sent",
-      description: "An overdue return reminder has been sent to the employee.",
+      description: "A return reminder has been dispatched to the assigned employee.",
     });
     setDismissed(true);
   };
@@ -36,7 +48,7 @@ export function AlertBanner() {
             {overdueAlert.title}
           </h4>
           <p className="text-xs text-destructive/80 leading-normal">
-            {overdueAlert.description}
+            {overdueAlert.message}
           </p>
         </div>
       </div>

@@ -5,7 +5,14 @@ export const bookingsApi = {
     const response = await api.get('/bookings', { params: filters });
     return response.data?.data;
   },
-  create: async (data: { assetId: string; startTime: string; endTime: string }) => {
+  create: async (data: { 
+    assetId: string; 
+    startTime: string; 
+    endTime: string;
+    title?: string;
+    purpose?: string;
+    attendees?: number;
+  }) => {
     const response = await api.post('/bookings', data);
     return response.data?.data;
   },
@@ -14,3 +21,4 @@ export const bookingsApi = {
     return response.data?.data;
   },
 };
+

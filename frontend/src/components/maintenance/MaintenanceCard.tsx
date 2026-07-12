@@ -39,22 +39,22 @@ export function MaintenanceCard({ request, onClick }: MaintenanceCardProps) {
       draggable
       onDragStart={handleDragStart}
       onClick={() => onClick(request)}
-      className={`bg-white rounded-xl border border-zinc-200 p-4 shadow-xs transition-all cursor-pointer group active:scale-[0.98] select-none hover:shadow-sm hover:translate-y-[-1px] ${getPriorityBorderColor(request.priority)}`}
+      className={`bg-white rounded-xl border border-zinc-200 p-5 shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer group active:scale-[0.99] select-none hover:-translate-y-0.5 ${getPriorityBorderColor(request.priority)}`}
     >
-      <div className="flex justify-between items-start mb-3">
-        <span className="text-[10px] font-mono font-bold text-zinc-400 bg-zinc-50 px-1.5 py-0.5 rounded border border-zinc-200">
-          {request.id}
+      <div className="flex justify-between items-center mb-3">
+        <span className="text-[10px] font-mono font-bold text-zinc-500 bg-zinc-50 px-2 py-0.5 rounded border border-zinc-200/80 shadow-3xs">
+          #{request.id.slice(0, 8)}
         </span>
-        <span className={`text-[9px] uppercase font-extrabold tracking-wider px-2 py-0.5 rounded-full border ${getPriorityColor(request.priority)}`}>
+        <span className={`text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full border ${getPriorityColor(request.priority)}`}>
           {request.priority}
         </span>
       </div>
 
-      <h4 className="font-bold text-zinc-900 text-xs leading-tight mb-1 group-hover:text-primary transition-colors font-sans line-clamp-2">
+      <h4 className="font-bold text-zinc-900 text-xs leading-tight mb-2 group-hover:text-primary transition-colors font-sans line-clamp-2">
         {request.issue}
       </h4>
-      <p className="text-[10px] text-zinc-500 truncate mb-4 font-sans font-medium">
-        {request.assetName} • <span className="font-semibold text-zinc-400 font-mono">{request.assetId}</span>
+      <p className="text-[10px] text-zinc-500 mb-4 font-sans font-medium">
+        {request.assetName} <span className="text-zinc-300 mx-1.5">•</span> <span className="font-semibold text-zinc-400 font-mono text-[9px] bg-zinc-50 px-1 py-0.5 rounded border border-zinc-100">{request.assetId}</span>
       </p>
 
       <div className="flex items-center justify-between text-[10px] text-zinc-500 pt-3 border-t border-zinc-100 font-sans font-medium shrink-0">

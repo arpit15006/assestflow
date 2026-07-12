@@ -6,7 +6,7 @@ import { ResourceSelector } from "@/components/bookings/ResourceSelector";
 import { BookingTimeline } from "@/components/bookings/BookingTimeline";
 import { BookingForm } from "@/components/bookings/BookingForm";
 import { UpcomingBookingsTable } from "@/components/bookings/UpcomingBookingsTable";
-import { MOCK_BOOKINGS, MOCK_RESOURCES, Booking } from "@/lib/mock/bookings";
+import { Booking } from "@/lib/mock/bookings";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import { X, Loader2, AlertCircle, Info, CalendarDays, RefreshCw } from 'lucide-react';
@@ -17,7 +17,7 @@ import { bookingsApi } from "@/lib/api/bookings";
 
 export default function BookingsPage() {
   const queryClient = useQueryClient();
-  const [selectedResourceId, setSelectedResourceId] = useState<string>('res-001');
+  const [selectedResourceId, setSelectedResourceId] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [timeSelection, setTimeSelection] = useState<{start: Date, end: Date} | null>(null);
 
@@ -29,19 +29,20 @@ export default function BookingsPage() {
 
   const resources = useMemo(() => {
     const list = serverResources?.assets || (Array.isArray(serverResources) ? serverResources : []);
-    if (list.length === 0) return MOCK_RESOURCES;
     return list.map((asset: any) => ({
       id: asset.id,
       name: asset.name,
       category: asset.category?.name || 'Shared Resource',
-      type: asset.category?.name === 'Vehicles' ? 'vehicle' : 'room',
-      capacity: asset.category?.name === 'Projectors' ? 1 : 12,
+      type: asset.category?.name === 'Vehicles' ? 'Vehicle' : asset.category?.name === 'Projectors' ? 'Projector' : 'Conference Room',
+      location: asset.location,
+      assetTag: asset.assetTag,
+      capacity: asset.category?.name === 'Projectors' ? 1 : asset.category?.name === 'Vehicles' ? 5 : 12,
     }));
   }, [serverResources]);
 
-  // Sync selected resource ID if dynamic list is loaded
+  // Auto-select first resource when list loads
   useEffect(() => {
-    if (resources.length > 0 && selectedResourceId === 'res-001' && resources[0].id !== 'res-001') {
+    if (resources.length > 0 && !selectedResourceId) {
       setSelectedResourceId(resources[0].id);
     }
   }, [resources, selectedResourceId]);
@@ -57,7 +58,7 @@ export default function BookingsPage() {
     return serverBookings.map((b: any) => ({
       id: b.id,
       resourceId: b.assetId,
-      title: b.title || 'Resource Booking Slot',
+      title: b.title || b.asset?.name || 'Resource Booking Slot',
       date: new Date(b.startTime).toISOString().split('T')[0],
       startTime: new Date(b.startTime).toTimeString().slice(0, 5),
       endTime: new Date(b.endTime).toTimeString().slice(0, 5),
@@ -256,6 +257,7 @@ export default function BookingsPage() {
           <div className="lg:col-span-4 flex flex-col gap-6">
             <BookingForm 
               resourceId={selectedResourceId}
+              activeResource={activeResource}
               selectedStart={timeSelection?.start}
               selectedEnd={timeSelection?.end}
               existingBookings={resourceAllBookings}

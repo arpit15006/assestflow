@@ -5,7 +5,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { MaintenanceKanbanBoard } from "@/components/maintenance/MaintenanceKanbanBoard";
 import { MaintenanceDetailsDialog } from "@/components/maintenance/MaintenanceDetailsDialog";
 import { NewRequestDialog } from "@/components/maintenance/NewRequestDialog";
-import { MOCK_MAINTENANCE_REQUESTS, MaintenanceRequest, MaintenanceStatus } from "@/lib/mock/maintenance";
+import { MaintenanceRequest, MaintenanceStatus } from "@/lib/mock/maintenance";
 import { Plus } from 'lucide-react';
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
@@ -29,9 +29,11 @@ export default function MaintenancePage() {
     if (!serverRequests) return [];
     return serverRequests.map((r: any) => ({
       id: r.id,
+      assetId: r.asset?.assetTag || 'AF-XXXX',
       assetName: r.asset?.name || 'Unknown Asset',
       assetTag: r.asset?.assetTag || 'AF-XXXX',
-      description: r.description,
+      issue: r.description.includes(' — ') ? r.description.split(' — ')[0] : r.description,
+      description: r.description.includes(' — ') ? r.description.split(' — ')[1] : r.description,
       priority: r.priority.charAt(0) + r.priority.slice(1).toLowerCase(),
       status: r.status === 'PENDING' ? 'Pending' 
             : r.status === 'APPROVED' ? 'Approved' 
@@ -82,17 +84,11 @@ export default function MaintenancePage() {
     }
   });
 
-  const handleCreateRequestSubmit = (data: Omit<MaintenanceRequest, 'id' | 'status' | 'dateRequested' | 'comments' | 'activityLog'>) => {
-    // Find asset ID in database if tag or name matched
-    // For convenience in prototyping, retrieve assets first or use hardcoded asset id
-    api.get("/assets").then((res) => {
-      const matched = res.data?.data?.assets?.find((a: any) => a.name.toLowerCase().includes(data.assetName.toLowerCase()) || a.assetTag === data.assetId);
-      const assetId = matched?.id || "a-1"; // Fallback to first available asset
-      createRequestMutation.mutate({
-        assetId,
-        description: data.description,
-        priority: data.priority.toUpperCase(),
-      });
+  const handleCreateRequestSubmit = (data: any) => {
+    createRequestMutation.mutate({
+      assetId: data.assetId,
+      description: data.description,
+      priority: data.priority.toUpperCase(),
     });
   };
 

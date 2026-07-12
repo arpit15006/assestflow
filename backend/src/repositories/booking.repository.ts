@@ -14,7 +14,7 @@ export const bookingRepository = {
     }),
 
   findAll: (params: { page?: number; limit?: number; userId?: string; assetId?: string }) => {
-    const { page = 1, limit = 20, userId, assetId } = params;
+    const { page = 1, limit = 100, userId, assetId } = params;
     return prisma.booking.findMany({
       where: {
         ...(userId && { userId }),
@@ -22,11 +22,16 @@ export const bookingRepository = {
       },
       include: {
         asset: { include: { category: true } },
-        user: { select: { id: true, name: true, email: true } },
+        user: { 
+          select: { 
+            id: true, name: true, email: true,
+            department: { select: { id: true, name: true } }
+          } 
+        },
       },
       skip: (page - 1) * limit,
       take: limit,
-      orderBy: { startTime: 'desc' },
+      orderBy: { startTime: 'asc' },
     });
   },
 

@@ -83,7 +83,7 @@ export function AppSidebar({
           <Logo className="h-8 w-8 shrink-0" />
           {!collapsed && (
             <span className="font-semibold text-foreground text-base tracking-tight whitespace-nowrap">
-              AssetFlow <span className="text-primary font-bold">AI</span>
+              AssetFlow
             </span>
           )}
         </div>

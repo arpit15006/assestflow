@@ -6,7 +6,7 @@ import { AssetSearch } from "@/components/allocations/AssetSearch";
 import { AssetDetailsCard } from "@/components/allocations/AssetDetailsCard";
 import { AllocationForm } from "@/components/allocations/AllocationForm";
 import { AllocationHistoryTable } from "@/components/allocations/AllocationHistoryTable";
-import { MOCK_ASSETS, MOCK_ALLOCATION_HISTORY, MOCK_EMPLOYEES, Asset, AllocationHistoryRecord } from "@/lib/mock/allocations";
+import { Asset, AllocationHistoryRecord } from "@/lib/mock/allocations";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import { Search, Filter, Layers, CheckCircle2, AlertCircle, Info, RefreshCw } from 'lucide-react';

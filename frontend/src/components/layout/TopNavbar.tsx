@@ -65,6 +65,22 @@ export function TopNavbar({ onMobileMenuToggle, collapsed }: TopNavbarProps) {
     return [{ label: "Dashboard" }];
   };
 
+  const getRoleBadgeStyle = (role: string) => {
+    switch (role) {
+      case 'ADMIN': return 'bg-red-50 text-red-700 border-red-200';
+      case 'ASSET_MANAGER': return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'DEPARTMENT_HEAD': return 'bg-purple-50 text-purple-700 border-purple-200';
+      case 'EMPLOYEE': return 'bg-zinc-50 text-zinc-700 border-zinc-200';
+      case 'AUDITOR': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'TECHNICIAN': return 'bg-orange-50 text-orange-700 border-orange-200';
+      default: return 'bg-zinc-50 text-zinc-700 border-zinc-200';
+    }
+  };
+
+  const initials = user?.name 
+    ? user.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() 
+    : 'U';
+
   return (
     <header className="sticky top-0 right-0 z-20 flex h-16 w-full items-center justify-between border-b border-border bg-background/95 px-6 backdrop-blur-md transition-colors duration-300">
       {/* Left side: Hamburger (Mobile) + Breadcrumbs */}
@@ -77,12 +93,12 @@ export function TopNavbar({ onMobileMenuToggle, collapsed }: TopNavbarProps) {
         >
           <Menu className="h-5 w-5" />
         </button>
-
+ 
         <div className="hidden sm:block">
           <Breadcrumbs items={getBreadcrumbs()} />
         </div>
       </div>
-
+ 
       {/* Right side: Search + Bell + Avatar */}
       <div className="flex items-center gap-4">
         {/* Search */}
@@ -96,7 +112,7 @@ export function TopNavbar({ onMobileMenuToggle, collapsed }: TopNavbarProps) {
             className="w-full h-9 pl-9 pr-4 rounded-full border border-border bg-muted/50 hover:bg-muted focus:bg-background text-xs focus:outline-none focus:ring-2 focus:ring-ring focus:border-border transition-all font-medium text-foreground placeholder:text-muted-foreground"
           />
         </form>
-
+ 
         {/* Notifications Bell */}
         <button
           type="button"
@@ -107,26 +123,37 @@ export function TopNavbar({ onMobileMenuToggle, collapsed }: TopNavbarProps) {
           <Bell className="h-4 w-4" />
           <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-destructive" />
         </button>
-
+ 
         {/* User Profile Dropdown */}
         <DropdownMenu.Root>
           <DropdownMenu.Trigger asChild>
             <button
               type="button"
-              className="flex h-9 items-center gap-3 focus:outline-none rounded-lg p-1 hover:bg-muted transition-colors focus-visible:ring-2 focus-visible:ring-ring text-left"
+              className="flex h-10 items-center gap-3 focus:outline-none rounded-lg p-1 hover:bg-muted transition-colors focus-visible:ring-2 focus-visible:ring-ring text-left"
               aria-label="User profile settings"
             >
               <div className="hidden lg:flex flex-col text-right">
-                <span className="text-xs font-semibold text-foreground leading-none">
+                <span className="text-xs font-bold text-foreground leading-none">
                   {user?.name}
                 </span>
-                <span className="text-[10px] text-muted-foreground mt-1.5">
-                  {user?.role?.replace("_", " ")}
-                </span>
+                <div className="flex items-center gap-1.5 mt-1">
+                  {user?.department?.name && (
+                    <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider leading-none">
+                      {user.department.name}
+                    </span>
+                  )}
+                  <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded leading-none shrink-0 border ${getRoleBadgeStyle(user?.role || '')}`}>
+                    {user?.role?.replace("_", " ")}
+                  </span>
+                </div>
               </div>
-              <div className="w-8 h-8 rounded-full bg-muted border border-border flex items-center justify-center text-muted-foreground">
-                <User className="w-4 h-4" />
-              </div>
+              {user?.avatarUrl ? (
+                <img src={user.avatarUrl} alt={user.name} className="w-8 h-8 rounded-full object-cover border border-border" />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-xs font-bold text-primary">
+                  {initials}
+                </div>
+              )}
             </button>
           </DropdownMenu.Trigger>
 

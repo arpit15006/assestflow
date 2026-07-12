@@ -4,6 +4,9 @@ export const createBookingSchema = z.object({
   assetId: z.string().uuid(),
   startTime: z.string().datetime(),
   endTime: z.string().datetime(),
+  title: z.string().optional(),
+  purpose: z.string().optional(),
+  attendees: z.number().int().positive().optional(),
 }).refine((d) => new Date(d.startTime) < new Date(d.endTime), {
   message: 'End time must be after start time',
   path: ['endTime'],
@@ -14,3 +17,4 @@ export const cancelBookingSchema = z.object({
 });
 
 export type CreateBookingInput = z.infer<typeof createBookingSchema>;
+

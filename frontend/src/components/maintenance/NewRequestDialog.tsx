@@ -1,70 +1,51 @@
 import React, { useState, useEffect } from 'react';
-import { MaintenanceRequest, MaintenancePriority } from '@/lib/mock/maintenance';
-import { MOCK_ASSETS } from '@/lib/mock/allocations';
-import { X, AlertCircle, Loader2, Plus, Info } from 'lucide-react';
+import { MaintenancePriority } from '@/lib/mock/maintenance';
+import { X, AlertCircle, Loader2, Plus, Info, Search } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { assetsApi } from '@/lib/api/assets';
 
 interface NewRequestDialogProps {
   onClose: () => void;
-  onSubmit: (newRequest: Omit<MaintenanceRequest, 'id' | 'status' | 'dateRequested' | 'comments' | 'activityLog'>) => void;
+  onSubmit: (newRequest: any) => void;
 }
 
 export function NewRequestDialog({ onClose, onSubmit }: NewRequestDialogProps) {
-  const [assetTag, setAssetTag] = useState('');
-  const [assetName, setAssetName] = useState('');
+  const [selectedAssetId, setSelectedAssetId] = useState('');
   const [issue, setIssue] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<MaintenancePriority>('Medium');
-  const [requestedBy, setRequestedBy] = useState('');
-  const [department, setDepartment] = useState('Engineering');
 
   const [isLoading, setIsLoading] = useState(false);
-  const [touched, setTouched] = useState({ assetTag: false, issue: false, description: false, requestedBy: false });
-  const [errors, setErrors] = useState({ assetTag: '', issue: '', description: '', requestedBy: '' });
+  const [touched, setTouched] = useState({ asset: false, issue: false, description: false });
+  const [errors, setErrors] = useState({ asset: '', issue: '', description: '' });
 
-  // Auto-populate asset name based on selected tag
-  useEffect(() => {
-    const selectedAsset = MOCK_ASSETS.find(a => a.tag === assetTag);
-    if (selectedAsset) {
-      setAssetName(selectedAsset.name);
-    } else {
-      setAssetName('');
-    }
-  }, [assetTag]);
+  // Load all assets from real API
+  const { data: assetData, isLoading: assetsLoading } = useQuery({
+    queryKey: ['assets-for-maintenance'],
+    queryFn: () => assetsApi.list({ limit: 200 }),
+  });
+
+  const assets: any[] = assetData?.assets || (Array.isArray(assetData) ? assetData : []);
+  const selectedAsset = assets.find((a: any) => a.id === selectedAssetId);
 
   // Form validation
   const validate = () => {
-    const newErrors = { assetTag: '', issue: '', description: '', requestedBy: '' };
-    
-    if (touched.assetTag && !assetTag) {
-      newErrors.assetTag = 'Asset Tag selection is required.';
+    const newErrors = { asset: '', issue: '', description: '' };
+    if (touched.asset && !selectedAssetId) {
+      newErrors.asset = 'Please select an asset.';
     }
     if (touched.issue) {
-      if (!issue.trim()) {
-        newErrors.issue = 'Issue summary is required.';
-      } else if (issue.trim().length < 5) {
-        newErrors.issue = 'Issue summary must be at least 5 characters.';
-      }
+      if (!issue.trim()) newErrors.issue = 'Issue summary is required.';
+      else if (issue.trim().length < 5) newErrors.issue = 'At least 5 characters required.';
     }
     if (touched.description) {
-      if (!description.trim()) {
-        newErrors.description = 'Detailed description is required.';
-      } else if (description.trim().length < 10) {
-        newErrors.description = 'Description must be at least 10 characters.';
-      }
-    }
-    if (touched.requestedBy) {
-      if (!requestedBy.trim()) {
-        newErrors.requestedBy = 'Requester name is required.';
-      } else if (requestedBy.trim().length < 3) {
-        newErrors.requestedBy = 'Name must be at least 3 characters.';
-      }
+      if (!description.trim()) newErrors.description = 'Detailed description is required.';
+      else if (description.trim().length < 10) newErrors.description = 'At least 10 characters required.';
     }
     setErrors(newErrors);
   };
 
-  useEffect(() => {
-    validate();
-  }, [assetTag, issue, description, requestedBy, touched]);
+  useEffect(() => { validate(); }, [selectedAssetId, issue, description, touched]);
 
   const handleBlur = (field: keyof typeof touched) => {
     setTouched(prev => ({ ...prev, [field]: true }));
@@ -72,32 +53,28 @@ export function NewRequestDialog({ onClose, onSubmit }: NewRequestDialogProps) {
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setTouched({ assetTag: true, issue: true, description: true, requestedBy: true });
-    
-    const isValid = assetTag && issue.trim().length >= 5 && description.trim().length >= 10 && requestedBy.trim().length >= 3;
+    setTouched({ asset: true, issue: true, description: true });
+
+    const isValid = selectedAssetId && issue.trim().length >= 5 && description.trim().length >= 10;
     if (!isValid) return;
 
     setIsLoading(true);
-
     setTimeout(() => {
       setIsLoading(false);
       onSubmit({
-        assetId: assetTag,
-        assetName,
-        issue: issue.trim(),
-        description: description.trim(),
+        assetId: selectedAssetId,
+        assetName: selectedAsset?.name || 'Unknown',
+        description: `${issue.trim()} — ${description.trim()}`,
         priority,
-        requestedBy: requestedBy.trim(),
-        department
       });
       onClose();
     }, 850);
   };
 
-  const isFormValid = assetTag && issue.trim().length >= 5 && description.trim().length >= 10 && requestedBy.trim().length >= 3 && !isLoading;
+  const isFormValid = selectedAssetId && issue.trim().length >= 5 && description.trim().length >= 10 && !isLoading;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-900/40 backdrop-blur-xs animate-in fade-in duration-200"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
@@ -108,45 +85,49 @@ export function NewRequestDialog({ onClose, onSubmit }: NewRequestDialogProps) {
             <Plus className="w-4.5 h-4.5 text-primary" />
             Create Maintenance Request
           </h3>
-          <button 
-            onClick={onClose}
-            className="p-1 text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 rounded-md transition-colors"
-          >
+          <button onClick={onClose} className="p-1 text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 rounded-md transition-colors">
             <X className="w-4.5 h-4.5" />
           </button>
         </div>
 
         {/* Form body */}
         <form onSubmit={handleFormSubmit} className="p-6 space-y-4">
-          
+
           <div className="grid grid-cols-2 gap-4">
-            {/* Asset Tag Dropdown */}
+            {/* Asset Select */}
             <div className="space-y-1">
-              <label className="text-xs font-bold text-zinc-700 block">Asset Tag</label>
-              <select
-                value={assetTag}
-                onChange={(e) => setAssetTag(e.target.value)}
-                onBlur={() => handleBlur('assetTag')}
-                className={`w-full px-3 py-2 bg-white border rounded-lg text-xs font-semibold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all
-                  ${errors.assetTag ? 'border-red-300 ring-2 ring-red-50' : 'border-zinc-200'}
-                `}
-              >
-                <option value="" disabled>Select Tag...</option>
-                {MOCK_ASSETS.map(asset => (
-                  <option key={asset.id} value={asset.tag}>{asset.tag} ({asset.name})</option>
-                ))}
-              </select>
-              {errors.assetTag && <p className="text-[10px] text-red-500 font-medium">{errors.assetTag}</p>}
+              <label className="text-xs font-bold text-zinc-700 block">Asset</label>
+              {assetsLoading ? (
+                <div className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg flex items-center gap-2 text-zinc-400">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span className="text-xs">Loading assets...</span>
+                </div>
+              ) : (
+                <select
+                  value={selectedAssetId}
+                  onChange={(e) => setSelectedAssetId(e.target.value)}
+                  onBlur={() => handleBlur('asset')}
+                  className={`w-full px-3 py-2 bg-white border rounded-lg text-xs font-semibold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all
+                    ${errors.asset ? 'border-red-300 ring-2 ring-red-50' : 'border-zinc-200'}
+                  `}
+                >
+                  <option value="" disabled>Select asset...</option>
+                  {assets.map((asset: any) => (
+                    <option key={asset.id} value={asset.id}>{asset.assetTag} — {asset.name}</option>
+                  ))}
+                </select>
+              )}
+              {errors.asset && <p className="text-[10px] text-red-500 font-medium">{errors.asset}</p>}
             </div>
 
             {/* Asset Name (Autofilled) */}
             <div className="space-y-1">
-              <label className="text-xs font-bold text-zinc-500 block">Asset Name (Autofilled)</label>
+              <label className="text-xs font-bold text-zinc-500 block">Asset Name (Auto)</label>
               <input
                 type="text"
                 disabled
-                value={assetName}
-                placeholder="Asset Registry Lookup..."
+                value={selectedAsset?.name || ''}
+                placeholder="Select an asset..."
                 className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-xs text-zinc-500 font-medium"
               />
             </div>
@@ -168,37 +149,16 @@ export function NewRequestDialog({ onClose, onSubmit }: NewRequestDialogProps) {
               </select>
             </div>
 
-            {/* Requester Department */}
+            {/* Department (static from auth, shown for context) */}
             <div className="space-y-1">
-              <label className="text-xs font-bold text-zinc-700 block">Department</label>
-              <select
-                value={department}
-                onChange={(e) => setDepartment(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg text-xs font-semibold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
-              >
-                <option value="Engineering">Engineering</option>
-                <option value="Design">Design</option>
-                <option value="Procurement">Procurement</option>
-                <option value="HR">Human Resources</option>
-                <option value="Logistics">Logistics</option>
-              </select>
+              <label className="text-xs font-bold text-zinc-700 block">Category</label>
+              <input
+                type="text"
+                disabled
+                value={selectedAsset?.category?.name || 'Auto-detected'}
+                className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-xs text-zinc-500 font-medium"
+              />
             </div>
-          </div>
-
-          {/* Requested By */}
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-zinc-700 block">Requested By</label>
-            <input
-              type="text"
-              placeholder="e.g. Arpit Patel"
-              value={requestedBy}
-              onChange={(e) => setRequestedBy(e.target.value)}
-              onBlur={() => handleBlur('requestedBy')}
-              className={`w-full px-3 py-2 bg-white border rounded-lg text-xs font-medium text-zinc-900 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all
-                ${errors.requestedBy ? 'border-red-300 ring-2 ring-red-50' : 'border-zinc-200'}
-              `}
-            />
-            {errors.requestedBy && <p className="text-[10px] text-red-500 font-medium">{errors.requestedBy}</p>}
           </div>
 
           {/* Issue Summary */}
@@ -206,7 +166,7 @@ export function NewRequestDialog({ onClose, onSubmit }: NewRequestDialogProps) {
             <label className="text-xs font-bold text-zinc-700 block">Issue Summary</label>
             <input
               type="text"
-              placeholder="e.g. Broken monitor stand, AC compressor rattle"
+              placeholder="e.g. Screen flickering, battery not charging, fan noise"
               value={issue}
               onChange={(e) => setIssue(e.target.value)}
               onBlur={() => handleBlur('issue')}
@@ -217,7 +177,7 @@ export function NewRequestDialog({ onClose, onSubmit }: NewRequestDialogProps) {
             {errors.issue ? (
               <p className="text-[10px] text-red-500 font-medium">{errors.issue}</p>
             ) : (
-              <p className="text-[9px] text-zinc-400">Brief one-line summary (minimum 5 characters).</p>
+              <p className="text-[9px] text-zinc-400">Brief one-line summary (min. 5 characters).</p>
             )}
           </div>
 
@@ -226,7 +186,7 @@ export function NewRequestDialog({ onClose, onSubmit }: NewRequestDialogProps) {
             <label className="text-xs font-bold text-zinc-700 block">Detailed Fault Description</label>
             <textarea
               rows={3}
-              placeholder="Describe symptoms, steps to reproduce, or incident context..."
+              placeholder="Describe symptoms, steps to reproduce, incident context, or impact on operations..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               onBlur={() => handleBlur('description')}
@@ -237,7 +197,7 @@ export function NewRequestDialog({ onClose, onSubmit }: NewRequestDialogProps) {
             {errors.description ? (
               <p className="text-red-500 font-medium text-[10px]">{errors.description}</p>
             ) : (
-              <p className="text-[9px] text-zinc-400">Provide troubleshooting notes or observations (minimum 10 characters).</p>
+              <p className="text-[9px] text-zinc-400">Provide troubleshooting notes or observations (min. 10 characters).</p>
             )}
           </div>
 

@@ -39,7 +39,13 @@ export const authService = {
     if (existing) throw Object.assign(new Error('Email already registered'), { status: 409 });
 
     const passwordHash = await hashPassword(data.password);
-    const user = await userRepository.create({ ...data, passwordHash, role: 'EMPLOYEE' });
+    const user = await userRepository.create({ 
+      name: data.name,
+      email: data.email,
+      passwordHash,
+      departmentId: data.departmentId,
+      role: 'EMPLOYEE'
+    });
     logger.info({ userId: user.id }, 'USER_REGISTERED');
     return user;
   },

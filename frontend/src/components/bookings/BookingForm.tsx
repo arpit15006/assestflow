@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Booking, MOCK_RESOURCES } from '@/lib/mock/bookings';
+import { Booking } from '@/lib/mock/bookings';
 import { AlertCircle, CheckCircle2, Loader2, Users2, Calendar } from 'lucide-react';
 
 interface BookingFormProps {
   resourceId: string;
+  activeResource?: any;
   selectedStart?: Date | null;
   selectedEnd?: Date | null;
   existingBookings: Booking[];
   onSubmit: (bookingData: any) => void;
 }
 
-export function BookingForm({ resourceId, selectedStart, selectedEnd, existingBookings, onSubmit }: BookingFormProps) {
+export function BookingForm({ resourceId, activeResource, selectedStart, selectedEnd, existingBookings, onSubmit }: BookingFormProps) {
   const [title, setTitle] = useState('');
   const [purpose, setPurpose] = useState('');
   const [startTime, setStartTime] = useState('');
@@ -19,8 +20,6 @@ export function BookingForm({ resourceId, selectedStart, selectedEnd, existingBo
   const [isSuccess, setIsSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [conflict, setConflict] = useState<Booking | null>(null);
-
-  const activeResource = MOCK_RESOURCES.find(r => r.id === resourceId);
 
   // Sync state with selected timeframe from calendar
   useEffect(() => {

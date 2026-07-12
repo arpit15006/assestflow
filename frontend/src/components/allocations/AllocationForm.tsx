@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Asset, Employee, MOCK_EMPLOYEES } from '@/lib/mock/allocations';
-import { AlertCircle, ArrowRight, CheckCircle2, Loader2 } from 'lucide-react';
+import { Asset, Employee } from '@/lib/mock/allocations';
+import { AlertCircle, ArrowRight, CheckCircle2, Loader2, Users } from 'lucide-react';
 
 interface AllocationFormProps {
   asset: Asset | null;
@@ -10,7 +10,7 @@ interface AllocationFormProps {
 }
 
 export function AllocationForm({ asset, employees, onAllocate, onTransfer }: AllocationFormProps) {
-  const employeeList = employees && employees.length > 0 ? employees : MOCK_EMPLOYEES;
+  const employeeList = employees && employees.length > 0 ? employees : [];
   const [selectedEmployee, setSelectedEmployee] = useState('');
   const [reason, setReason] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);

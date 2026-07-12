@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AssetFlow AI — Enterprise Asset Management",
+  title: "AssetFlow — Enterprise Asset Management",
   description: "Production-ready enterprise asset & resource management system.",
 };
 

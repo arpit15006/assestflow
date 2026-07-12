@@ -20,6 +20,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   switchUser: (role: Role) => Promise<void>;
   hasPermission: (permission: string) => boolean;
+  register: (name: string, email: string, password: string, departmentId?: string) => Promise<void>;
 }
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
@@ -70,6 +71,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const register = async (name: string, email: string, password: string, departmentId?: string) => {
+    const response = await api.post('/auth/register', { name, email, password, departmentId });
+    if (response.data?.success) {
+      toast({ type: 'success', title: 'Registration successful', description: 'Your Employee account has been created. Please log in.' });
+    } else {
+      throw new Error(response.data?.message || 'Registration failed');
+    }
+  };
+
   const logout = async () => {
     try {
       await api.post('/auth/logout');
@@ -106,7 +116,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, switchUser, hasPermission }}>
+    <AuthContext.Provider value={{ user, isLoading, login, logout, switchUser, hasPermission, register }}>
       {children}
     </AuthContext.Provider>
   );
