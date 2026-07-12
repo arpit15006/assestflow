@@ -12,6 +12,7 @@ export function LoginCard() {
 
   const handleLoginSuccess = (data: any) => {
     console.log("Logged in data:", data);
+    window.location.href = "/";
   };
 
   const handleCreateAccount = () => {

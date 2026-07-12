@@ -56,7 +56,6 @@ export function AppSidebar({
   const utilityNavItems = [
     { label: "Reports", icon: BarChart3, href: "/reports" },
     { label: "Notifications", icon: Bell, href: "/notifications", badge: 4 },
-    { label: "Settings", icon: Settings, href: "#settings" },
   ];
 
   const renderItems = (items: typeof coreNavItems) => {
@@ -127,7 +126,7 @@ export function AppSidebar({
       <div className="p-3 border-t border-border shrink-0">
         <button
           type="button"
-          onClick={() => alert("Logout flow is a frontend mock.")}
+          onClick={() => { window.location.href = "/login"; }}
           className={`group flex items-center gap-3 w-full rounded-lg p-2.5 text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive
             ${collapsed ? "justify-center" : ""}
           `}
