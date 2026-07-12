@@ -57,7 +57,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               </button>
             </div>
 
-            <AppSidebar activePath="/" collapsed={false} />
+            <AppSidebar collapsed={false} />
           </div>
         </div>
       )}
