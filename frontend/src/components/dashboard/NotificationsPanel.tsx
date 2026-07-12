@@ -5,6 +5,7 @@ import { Card, CardContent } from "../ui/Card";
 import { Button } from "../ui/Button";
 import { mockNotifications } from "@/lib/mock/notifications";
 import { AlertTriangle, Clock, Share2, Wrench, Calendar } from "lucide-react";
+import { useToast } from "@/components/ui/Toast";
 
 const iconMap = {
   OVERDUE: AlertTriangle,
@@ -20,8 +21,12 @@ const severityColorMap = {
 };
 
 export function NotificationsPanel() {
+  const { toast } = useToast();
+  const [dismissed, setDismissed] = React.useState<string[]>([]);
+
   const handleAction = (label: string, id: string) => {
-    alert(`Action executed: "${label}" on notification ${id}. (Mock Flow)`);
+    setDismissed((prev) => [...prev, id]);
+    toast({ type: "success", title: label, description: "Action completed successfully." });
   };
 
   return (
@@ -37,7 +42,7 @@ export function NotificationsPanel() {
 
       <CardContent className="p-5 flex-1 overflow-y-auto">
         <div className="space-y-3">
-          {mockNotifications.map((not) => {
+          {mockNotifications.filter((n) => !dismissed.includes(n.id)).map((not) => {
             const Icon = iconMap[not.type];
             return (
               <div

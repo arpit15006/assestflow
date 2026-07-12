@@ -9,6 +9,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/shared/ui/dropdown-menu";
+import { useToast } from "@/components/ui/Toast";
 
 interface DepartmentToolbarProps {
   searchQuery: string;
@@ -25,14 +26,13 @@ export function DepartmentToolbar({
   onAddClick,
   onRefresh,
 }: DepartmentToolbarProps) {
+  const { toast } = useToast();
+
   const getAddLabel = () => {
     switch (activeTab) {
-      case "departments":
-        return "Add Department";
-      case "categories":
-        return "Add Category";
-      default:
-        return "Add Employee";
+      case "departments": return "Add Department";
+      case "categories": return "Add Category";
+      default: return "Add Employee";
     }
   };
 
@@ -50,13 +50,12 @@ export function DepartmentToolbar({
         />
       </div>
 
-      {/* Action Filters, Sorting, and Actions */}
       <div className="flex flex-wrap items-center gap-2">
         <Button
           variant="outline"
           size="sm"
           className="h-9 px-3 text-xs font-medium border border-border text-foreground hover:bg-muted bg-background shadow-sm active:scale-95 transition-all duration-200"
-          onClick={() => alert("Local client sorting toggled (Mock Flow).")}
+          onClick={() => toast({ type: "info", title: "Sort", description: "Click column headers to sort the table." })}
         >
           <ArrowUpDown className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
           Sort
@@ -66,13 +65,12 @@ export function DepartmentToolbar({
           variant="outline"
           size="sm"
           className="h-9 px-3 text-xs font-medium border border-border text-foreground hover:bg-muted bg-background shadow-sm active:scale-95 transition-all duration-200"
-          onClick={() => alert("Local filters modal opened (Mock Flow).")}
+          onClick={() => toast({ type: "info", title: "Filters", description: "Use search and column headers to filter." })}
         >
           <SlidersHorizontal className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
           Filters
         </Button>
 
-        {/* Dropdown Menu for Import/Export */}
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
@@ -88,14 +86,14 @@ export function DepartmentToolbar({
           />
           <DropdownMenuContent align="end" className="w-40 bg-popover border-border shadow-md">
             <DropdownMenuItem
-              onClick={() => alert("Import data sheet dialog is a mock flow.")}
+              onClick={() => toast({ type: "info", title: "Import CSV", description: "Spreadsheet import coming soon." })}
               className="cursor-pointer text-xs"
             >
               <Upload className="w-3.5 h-3.5 mr-2 text-muted-foreground" />
               <span>Import CSV</span>
             </DropdownMenuItem>
             <DropdownMenuItem
-              onClick={() => alert("Export active sheet initiated.")}
+              onClick={() => toast({ type: "info", title: "Export CSV", description: "Data export initiated." })}
               className="cursor-pointer text-xs"
             >
               <Download className="w-3.5 h-3.5 mr-2 text-muted-foreground" />

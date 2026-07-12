@@ -21,7 +21,7 @@ const colorMap = {
 
 export function RecentActivity() {
   return (
-    <Card className="flex flex-col h-full rounded-xl border border-border bg-card shadow-xs">
+    <Card className="flex flex-col rounded-xl border border-border bg-card shadow-xs">
       <div className="h-16 flex items-center justify-between px-6 border-b border-border">
         <h2 className="text-base font-semibold tracking-tight text-foreground">
           Recent Activity Timeline

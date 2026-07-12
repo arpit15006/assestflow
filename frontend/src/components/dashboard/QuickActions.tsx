@@ -4,37 +4,36 @@ import * as React from "react";
 import { Plus, CalendarPlus, ShieldAlert, LucideIcon } from "lucide-react";
 import { Card } from "../ui/Card";
 import { Button } from "../ui/Button";
+import { useRouter } from "next/navigation";
 
-interface ActionItem {
-  title: string;
-  description: string;
-  icon: LucideIcon;
-  actionText: string;
-  onClick: () => void;
+interface QuickActionsProps {
+  onRegisterClick?: () => void;
 }
 
-export function QuickActions() {
-  const actions: ActionItem[] = [
+export function QuickActions({ onRegisterClick }: QuickActionsProps) {
+  const router = useRouter();
+
+  const actions = [
     {
       title: "Register Asset",
       description: "Onboard new hardware or equipment into the registry.",
       icon: Plus,
       actionText: "New Asset",
-      onClick: () => alert("Register Asset dialog is a mockup."),
+      onClick: () => onRegisterClick?.(),
     },
     {
       title: "Book Resource",
       description: "Schedule vehicle slots, meeting rooms, or cameras.",
       icon: CalendarPlus,
       actionText: "Reserve",
-      onClick: () => alert("Book Resource dialog is a mockup."),
+      onClick: () => router.push("/bookings"),
     },
     {
       title: "Raise Maintenance Request",
       description: "Report damaged assets and schedule repairs.",
       icon: ShieldAlert,
       actionText: "Report Issue",
-      onClick: () => alert("Raise Maintenance request dialog is a mockup."),
+      onClick: () => router.push("/maintenance"),
     },
   ];
 

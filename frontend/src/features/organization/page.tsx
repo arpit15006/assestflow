@@ -3,11 +3,7 @@
 import * as React from "react";
 import { motion } from "framer-motion";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/shared/ui/tabs";
-import {
-  initialDepartments,
-  initialCategories,
-  initialEmployees,
-} from "./data";
+import { initialDepartments, initialCategories, initialEmployees } from "./data";
 import { Department, Category, Employee } from "./types";
 import { DepartmentTable } from "./components/DepartmentTable";
 import { CategoryTable } from "./components/CategoryTable";
@@ -16,17 +12,19 @@ import { DepartmentToolbar } from "./components/DepartmentToolbar";
 import { AddDepartmentDialog } from "./components/AddDepartmentDialog";
 import { AddCategoryDialog } from "./components/AddCategoryDialog";
 import { AddEmployeeDialog } from "./components/AddEmployeeDialog";
+import { useToast } from "@/components/ui/Toast";
 
 export default function OrganizationPage() {
+  const { toast } = useToast();
   const [departments, setDepartments] = React.useState<Department[]>(initialDepartments);
   const [categories, setCategories] = React.useState<Category[]>(initialCategories);
   const [employees, setEmployees] = React.useState<Employee[]>(initialEmployees);
+  const [isRefreshing, setIsRefreshing] = React.useState(false);
 
   const [searchQuery, setSearchQuery] = React.useState("");
   const [activeTab, setActiveTab] = React.useState<"departments" | "categories" | "employees">("departments");
   const [activeDialog, setActiveDialog] = React.useState<"departments" | "categories" | "employees" | null>(null);
 
-  // Row Action dispatcher
   const handleRowAction = (action: string, item: Department | Category | Employee) => {
     if (action === "Delete") {
       if (activeTab === "departments") {
@@ -36,25 +34,19 @@ export default function OrganizationPage() {
       } else {
         setEmployees((prev) => prev.filter((e) => e.id !== item.id));
       }
-      alert(`Deleted ${item.name} successfully.`);
+      toast({ type: "success", title: "Deleted", description: `${item.name} has been removed.` });
       return;
     }
 
     if (action === "Archive" || action === "Deactivate") {
       if (activeTab === "departments") {
-        setDepartments((prev) =>
-          prev.map((d) => (d.id === item.id ? { ...d, status: "Inactive" } : d))
-        );
+        setDepartments((prev) => prev.map((d) => (d.id === item.id ? { ...d, status: "Inactive" } : d)));
       } else if (activeTab === "categories") {
-        setCategories((prev) =>
-          prev.map((c) => (c.id === item.id ? { ...c, status: "Inactive" } : c))
-        );
+        setCategories((prev) => prev.map((c) => (c.id === item.id ? { ...c, status: "Inactive" } : c)));
       } else {
-        setEmployees((prev) =>
-          prev.map((e) => (e.id === item.id ? { ...e, status: "Inactive" } : e))
-        );
+        setEmployees((prev) => prev.map((e) => (e.id === item.id ? { ...e, status: "Inactive" } : e)));
       }
-      alert(`Archived/Deactivated ${item.name}.`);
+      toast({ type: "info", title: "Deactivated", description: `${item.name} has been set to Inactive.` });
       return;
     }
 
@@ -62,14 +54,16 @@ export default function OrganizationPage() {
       setEmployees((prev) =>
         prev.map((e) => (e.id === item.id ? { ...e, role: `Lead ${e.role}` } : e))
       );
-      alert(`Promoted employee ${item.name}.`);
+      toast({ type: "success", title: "Employee promoted", description: `${item.name} has been promoted.` });
       return;
     }
 
-    alert(`${action} triggered on: "${item.name}" (id: ${item.id}). (Mock Flow)`);
+    if (action === "View" || action === "Edit" || action === "Duplicate") {
+      toast({ type: "info", title: `${action} — ${item.name}`, description: "Full editing UI coming soon." });
+      return;
+    }
   };
 
-  // Add handlers
   const handleAddDepartment = (newDept: Omit<Department, "id" | "employeesCount" | "status">) => {
     const dept: Department = {
       ...newDept,
@@ -78,7 +72,7 @@ export default function OrganizationPage() {
       employeesCount: 0,
     };
     setDepartments((prev) => [dept, ...prev]);
-    alert(`Department "${dept.name}" created successfully.`);
+    toast({ type: "success", title: "Department created", description: `"${dept.name}" has been added.` });
   };
 
   const handleAddCategory = (newCat: Omit<Category, "id" | "assetsCount" | "status">) => {
@@ -89,7 +83,7 @@ export default function OrganizationPage() {
       assetsCount: 0,
     };
     setCategories((prev) => [cat, ...prev]);
-    alert(`Category "${cat.name}" created successfully.`);
+    toast({ type: "success", title: "Category created", description: `"${cat.name}" has been added.` });
   };
 
   const handleAddEmployee = (newEmp: Omit<Employee, "id" | "status">) => {
@@ -99,11 +93,15 @@ export default function OrganizationPage() {
       status: "Active",
     };
     setEmployees((prev) => [emp, ...prev]);
-    alert(`Employee "${emp.name}" registered successfully.`);
+    toast({ type: "success", title: "Employee added", description: `${emp.name} has been registered.` });
   };
 
   const handleRefresh = () => {
-    alert("Refreshing organizational tables...");
+    setIsRefreshing(true);
+    setTimeout(() => {
+      setIsRefreshing(false);
+      toast({ type: "success", title: "Data refreshed", description: "Organization data is up to date." });
+    }, 800);
   };
 
   return (
@@ -113,19 +111,15 @@ export default function OrganizationPage() {
       transition={{ duration: 0.2, ease: "easeOut" }}
       className="space-y-6 w-full"
     >
-      {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">
-            Organization Setup
-          </h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Organization Setup</h1>
           <p className="text-sm text-muted-foreground">
-            Manage your organizational departments, categories, and employees.
+            Manage departments, asset categories, and employee records.
           </p>
         </div>
       </div>
 
-      {/* Toolbar */}
       <DepartmentToolbar
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -134,7 +128,6 @@ export default function OrganizationPage() {
         onRefresh={handleRefresh}
       />
 
-      {/* Tabs */}
       <Tabs
         value={activeTab}
         onValueChange={(val) => {
@@ -145,55 +138,40 @@ export default function OrganizationPage() {
       >
         <TabsList className="bg-muted p-1 rounded-lg">
           <TabsTrigger value="departments" className="text-xs font-semibold px-4 py-1.5 rounded-md">
-            Departments
+            Departments ({departments.length})
           </TabsTrigger>
           <TabsTrigger value="categories" className="text-xs font-semibold px-4 py-1.5 rounded-md">
-            Categories
+            Categories ({categories.length})
           </TabsTrigger>
           <TabsTrigger value="employees" className="text-xs font-semibold px-4 py-1.5 rounded-md">
-            Employees
+            Employees ({employees.length})
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="departments" className="focus-visible:outline-none">
-          <DepartmentTable
-            data={departments}
-            searchQuery={searchQuery}
-            onAction={handleRowAction}
-          />
+          <DepartmentTable data={departments} searchQuery={searchQuery} onAction={handleRowAction} />
         </TabsContent>
 
         <TabsContent value="categories" className="focus-visible:outline-none">
-          <CategoryTable
-            data={categories}
-            searchQuery={searchQuery}
-            onAction={handleRowAction}
-          />
+          <CategoryTable data={categories} searchQuery={searchQuery} onAction={handleRowAction} />
         </TabsContent>
 
         <TabsContent value="employees" className="focus-visible:outline-none">
-          <EmployeeTable
-            data={employees}
-            searchQuery={searchQuery}
-            onAction={handleRowAction}
-          />
+          <EmployeeTable data={employees} searchQuery={searchQuery} onAction={handleRowAction} />
         </TabsContent>
       </Tabs>
 
-      {/* Modals */}
       <AddDepartmentDialog
         open={activeDialog === "departments"}
         onOpenChange={(open) => setActiveDialog(open ? "departments" : null)}
         onAdd={handleAddDepartment}
         departments={departments}
       />
-
       <AddCategoryDialog
         open={activeDialog === "categories"}
         onOpenChange={(open) => setActiveDialog(open ? "categories" : null)}
         onAdd={handleAddCategory}
       />
-
       <AddEmployeeDialog
         open={activeDialog === "employees"}
         onOpenChange={(open) => setActiveDialog(open ? "employees" : null)}

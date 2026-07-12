@@ -1,11 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { Bell, Menu, Search, Sun, Moon, LogOut, User, Settings } from "lucide-react";
+import { Bell, Menu, Search, LogOut, User, Settings } from "lucide-react";
 import { Breadcrumbs } from "./Breadcrumbs";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { currentUser } from "@/lib/mock/users";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/Toast";
 
 interface TopNavbarProps {
   onMobileMenuToggle: () => void;
@@ -14,11 +15,25 @@ interface TopNavbarProps {
 
 export function TopNavbar({ onMobileMenuToggle, collapsed }: TopNavbarProps) {
   const [searchValue, setSearchValue] = React.useState("");
+  const [bellAnimated, setBellAnimated] = React.useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+  const { toast } = useToast();
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Search is handled globally or per page
+    if (!searchValue.trim()) return;
+    toast({
+      type: "info",
+      title: `Searching: "${searchValue}"`,
+      description: "Global search across assets, bookings, and allocations.",
+    });
+  };
+
+  const handleBellClick = () => {
+    setBellAnimated(true);
+    setTimeout(() => setBellAnimated(false), 600);
+    router.push("/notifications");
   };
 
   const getBreadcrumbs = () => {
@@ -67,9 +82,9 @@ export function TopNavbar({ onMobileMenuToggle, collapsed }: TopNavbarProps) {
         </div>
       </div>
 
-      {/* Right side: Search bar + Notification Bell + User Avatar Dropdown */}
+      {/* Right side: Search + Bell + Avatar */}
       <div className="flex items-center gap-4">
-        {/* Search Input Box */}
+        {/* Search */}
         <form onSubmit={handleSearchSubmit} className="relative hidden md:block w-72">
           <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
           <input
@@ -81,18 +96,18 @@ export function TopNavbar({ onMobileMenuToggle, collapsed }: TopNavbarProps) {
           />
         </form>
 
-        {/* Notifications Icon Button */}
+        {/* Notifications Bell */}
         <button
           type="button"
-          onClick={() => alert("Notification panel toggling is a mock flow.")}
-          className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors"
+          onClick={handleBellClick}
+          className={`relative flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors ${bellAnimated ? "animate-bounce" : ""}`}
           aria-label="Notifications"
         >
           <Bell className="h-4 w-4" />
           <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-destructive" />
         </button>
 
-        {/* User Profile Radix Dropdown Menu */}
+        {/* User Profile Dropdown */}
         <DropdownMenu.Root>
           <DropdownMenu.Trigger asChild>
             <button
@@ -126,7 +141,7 @@ export function TopNavbar({ onMobileMenuToggle, collapsed }: TopNavbarProps) {
               </div>
 
               <DropdownMenu.Item
-                onClick={() => alert("Profile navigation is a mockup.")}
+                onClick={() => router.push("/org-setup")}
                 className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer focus-visible:outline-none focus-visible:bg-muted"
               >
                 <User className="h-3.5 w-3.5 text-muted-foreground" />
@@ -134,7 +149,7 @@ export function TopNavbar({ onMobileMenuToggle, collapsed }: TopNavbarProps) {
               </DropdownMenu.Item>
 
               <DropdownMenu.Item
-                onClick={() => alert("Settings navigation is a mockup.")}
+                onClick={() => router.push("/org-setup")}
                 className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer focus-visible:outline-none focus-visible:bg-muted"
               >
                 <Settings className="h-3.5 w-3.5 text-muted-foreground" />
@@ -144,7 +159,7 @@ export function TopNavbar({ onMobileMenuToggle, collapsed }: TopNavbarProps) {
               <DropdownMenu.Separator className="h-px bg-border my-1" />
 
               <DropdownMenu.Item
-                onClick={() => alert("Logout flow is a mockup.")}
+                onClick={() => router.push("/")}
                 className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-destructive hover:bg-destructive/10 focus-visible:outline-none cursor-pointer"
               >
                 <LogOut className="h-3.5 w-3.5 text-destructive" />

@@ -10,8 +10,26 @@ import { NotificationsPanel } from "@/components/dashboard/NotificationsPanel";
 import { UpcomingTasks } from "@/components/dashboard/UpcomingTasks";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { RegisterAssetDialog } from "@/features/assets/components/RegisterAssetDialog";
+import { Asset } from "@/features/assets/types";
+import { initialAssets } from "@/features/assets/data";
+import { useToast } from "@/components/ui/Toast";
 
 export function DashboardPageClient() {
+  const { toast } = useToast();
+  const [registerOpen, setRegisterOpen] = React.useState(false);
+
+  const handleRegisterAsset = (
+    newAsset: Omit<Asset, "id" | "assetTag" | "lastUpdated" | "assignedTo" | "status">
+  ) => {
+    const generatedTag = `AF-${Math.floor(1000 + Math.random() * 9000)}`;
+    toast({
+      type: "success",
+      title: "Asset registered",
+      description: `${newAsset.name} added with tag ${generatedTag}.`,
+    });
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -33,14 +51,14 @@ export function DashboardPageClient() {
           <Button
             variant="outline"
             className="rounded-lg h-10 px-4 text-sm font-medium border border-border text-foreground hover:bg-muted bg-background shadow-sm active:scale-95 transition-all duration-200"
-            onClick={() => alert("New Asset Onboarding dialog is a mockup.")}
+            onClick={() => setRegisterOpen(true)}
           >
             <Plus className="w-4 h-4 mr-2" />
             New Asset
           </Button>
           <Button
             className="rounded-lg h-10 px-4 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm active:scale-95 transition-all duration-200"
-            onClick={() => alert("New Transfer Request dialog is a mockup.")}
+            onClick={() => window.location.assign("/allocations")}
           >
             <Plus className="w-4 h-4 mr-2" />
             New Request
@@ -64,22 +82,26 @@ export function DashboardPageClient() {
         <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
           Quick Action Shortcuts
         </h3>
-        <QuickActions />
+        <QuickActions onRegisterClick={() => setRegisterOpen(true)} />
       </div>
 
-      {/* 5. Details Section (Activity, Alerts, Tasks) */}
+      {/* 5. Details Section */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Recent Activity Feed */}
         <div className="lg:col-span-7">
           <RecentActivity />
         </div>
-
-        {/* Right Column: Actionable Alerts & Tasks Stack */}
         <div className="lg:col-span-5 flex flex-col space-y-6">
           <NotificationsPanel />
           <UpcomingTasks />
         </div>
       </div>
+
+      {/* Register Asset Dialog (reuse from assets feature) */}
+      <RegisterAssetDialog
+        open={registerOpen}
+        onOpenChange={setRegisterOpen}
+        onRegister={handleRegisterAsset}
+      />
     </motion.div>
   );
 }

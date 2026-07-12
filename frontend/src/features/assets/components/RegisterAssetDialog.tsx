@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/ui/select";
-import { FileUp, Link as LinkIcon } from "lucide-react";
+import { FileUp, Link as LinkIcon, X } from "lucide-react";
 import { Asset } from "../types";
 
 const schema = z.object({
@@ -72,14 +72,72 @@ export function RegisterAssetDialog({
     },
   });
 
+  const imageInputRef = React.useRef<HTMLInputElement>(null);
+  const docInputRef = React.useRef<HTMLInputElement>(null);
+
+  const [imageFile, setImageFile] = React.useState<File | null>(null);
+  const [imagePreview, setImagePreview] = React.useState<string | null>(null);
+  const [docFile, setDocFile] = React.useState<File | null>(null);
+
   React.useEffect(() => {
     if (open) {
       reset();
+      setImageFile(null);
+      setImagePreview(null);
+      setDocFile(null);
     }
   }, [open, reset]);
 
+  const handleImageClick = () => {
+    imageInputRef.current?.click();
+  };
+
+  const handleDocClick = () => {
+    docInputRef.current?.click();
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const url = URL.createObjectURL(file);
+      setImagePreview(url);
+    }
+  };
+
+  const handleDocChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setDocFile(file);
+    }
+  };
+
+  const removeImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setImageFile(null);
+    setImagePreview(null);
+    if (imageInputRef.current) imageInputRef.current.value = "";
+  };
+
+  const removeDoc = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDocFile(null);
+    if (docInputRef.current) docInputRef.current.value = "";
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
+  };
+
   const onSubmit = (data: FormData) => {
-    onRegister(data);
+    onRegister({
+      ...data,
+      image: imagePreview || undefined,
+    });
     onOpenChange(false);
   };
 
@@ -277,19 +335,83 @@ export function RegisterAssetDialog({
               4. Attachments & Media
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="border border-dashed border-border rounded-xl p-4 flex flex-col items-center justify-center space-y-2 cursor-pointer bg-muted/20 hover:bg-muted/40 transition-colors">
-                <FileUp className="h-6 w-6 text-muted-foreground" />
-                <span className="text-xs font-medium text-foreground">Upload Image</span>
-                <span className="text-[10px] text-muted-foreground text-center">
-                  Drag and drop files here (JPG, PNG max 5MB)
-                </span>
+              {/* Image Upload */}
+              <div 
+                onClick={handleImageClick}
+                className="relative border border-dashed border-border rounded-xl p-4 flex flex-col items-center justify-center space-y-2 cursor-pointer bg-muted/20 hover:bg-muted/40 transition-colors min-h-[120px]"
+              >
+                <input
+                  type="file"
+                  ref={imageInputRef}
+                  className="hidden"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleImageChange}
+                />
+                {imagePreview ? (
+                  <div className="relative group w-full h-full flex flex-col items-center justify-center">
+                    <img 
+                      src={imagePreview} 
+                      alt="Preview" 
+                      className="max-h-[80px] rounded-lg object-contain" 
+                    />
+                    <span className="text-[10px] text-muted-foreground truncate max-w-[150px] mt-1 font-medium">{imageFile?.name}</span>
+                    <button
+                      type="button"
+                      onClick={removeImage}
+                      className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-full p-1 shadow-md transition-all active:scale-95 z-10"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <FileUp className="h-6 w-6 text-muted-foreground" />
+                    <span className="text-xs font-medium text-foreground">Upload Image</span>
+                    <span className="text-[10px] text-muted-foreground text-center">
+                      Drag and drop files here (JPG, PNG max 5MB)
+                    </span>
+                  </>
+                )}
               </div>
-              <div className="border border-dashed border-border rounded-xl p-4 flex flex-col items-center justify-center space-y-2 cursor-pointer bg-muted/20 hover:bg-muted/40 transition-colors">
-                <LinkIcon className="h-6 w-6 text-muted-foreground" />
-                <span className="text-xs font-medium text-foreground">Upload Documents</span>
-                <span className="text-[10px] text-muted-foreground text-center">
-                  Invoices, manuals, or PDF agreements
-                </span>
+
+              {/* Document Upload */}
+              <div 
+                onClick={handleDocClick}
+                className="relative border border-dashed border-border rounded-xl p-4 flex flex-col items-center justify-center space-y-2 cursor-pointer bg-muted/20 hover:bg-muted/40 transition-colors min-h-[120px]"
+              >
+                <input
+                  type="file"
+                  ref={docInputRef}
+                  className="hidden"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.txt"
+                  onChange={handleDocChange}
+                />
+                {docFile ? (
+                  <div className="relative group w-full h-full flex flex-col items-center justify-center">
+                    <div className="flex items-center gap-2 p-2 bg-background border border-border rounded-lg w-full max-w-[200px]">
+                      <LinkIcon className="h-5 w-5 text-primary shrink-0" />
+                      <div className="flex-1 min-w-0 text-left">
+                        <p className="text-[10px] font-semibold text-foreground truncate">{docFile.name}</p>
+                        <p className="text-[9px] text-muted-foreground">{formatFileSize(docFile.size)}</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={removeDoc}
+                      className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-full p-1 shadow-md transition-all active:scale-95 z-10"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <LinkIcon className="h-6 w-6 text-muted-foreground" />
+                    <span className="text-xs font-medium text-foreground">Upload Documents</span>
+                    <span className="text-[10px] text-muted-foreground text-center">
+                      Invoices, manuals, or PDF agreements
+                    </span>
+                  </>
+                )}
               </div>
             </div>
           </div>

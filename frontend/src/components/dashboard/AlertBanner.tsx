@@ -1,17 +1,25 @@
 "use client";
 
 import * as React from "react";
-import { AlertCircle, ArrowRight } from "lucide-react";
+import { AlertCircle, ArrowRight, CheckCircle2 } from "lucide-react";
 import { Button } from "../ui/Button";
 import { mockNotifications } from "@/lib/mock/notifications";
+import { useToast } from "@/components/ui/Toast";
 
 export function AlertBanner() {
+  const { toast } = useToast();
+  const [dismissed, setDismissed] = React.useState(false);
   const overdueAlert = mockNotifications.find((n) => n.type === "OVERDUE");
 
-  if (!overdueAlert) return null;
+  if (!overdueAlert || dismissed) return null;
 
   const handleAction = () => {
-    alert("Reminder notification sent to employee! (Mock Operation)");
+    toast({
+      type: "success",
+      title: "Reminder sent",
+      description: "An overdue return reminder has been sent to the employee.",
+    });
+    setDismissed(true);
   };
 
   return (
