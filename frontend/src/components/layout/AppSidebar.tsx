@@ -51,7 +51,7 @@ export function AppSidebar({
 
   const operationalNavItems = [
     { label: "Maintenance", icon: Wrench, href: "/maintenance", badge: 12 },
-    { label: "Audit Cycles", icon: ClipboardCheck, href: "#audit" },
+    { label: "Audit Cycles", icon: ClipboardCheck, href: "/audit" },
   ];
 
   const utilityNavItems = [
