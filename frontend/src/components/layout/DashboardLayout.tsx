@@ -4,6 +4,7 @@ import * as React from "react";
 import { AppSidebar } from "./AppSidebar";
 import { TopNavbar } from "./TopNavbar";
 import { X } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -14,6 +15,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [collapsed, setCollapsed] = React.useState(false);
   // Mobile drawer open state
   const [mobileOpen, setMobileOpen] = React.useState(false);
+
+  const pathname = usePathname() || "/";
 
   const toggleSidebar = () => {
     setCollapsed((prev) => !prev);
@@ -31,7 +34,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     <div className="min-h-screen bg-zinc-50/50 text-zinc-950 font-sans">
       {/* 1. Desktop Sidebar Container */}
       <div className="hidden md:block">
-        <AppSidebar collapsed={collapsed} onToggle={toggleSidebar} />
+        <AppSidebar collapsed={collapsed} onToggle={toggleSidebar} activePath={pathname} />
       </div>
 
       {/* 2. Mobile Drawer Navigation Overlay Panel */}
@@ -57,7 +60,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               </button>
             </div>
 
-            <AppSidebar collapsed={false} />
+            <AppSidebar activePath={pathname} collapsed={false} />
           </div>
         </div>
       )}

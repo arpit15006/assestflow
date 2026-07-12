@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { LucideIcon } from "lucide-react";
+import Link from "next/link";
 
 import Link from "next/link";
 
@@ -29,7 +30,6 @@ export function SidebarItem({
       href={href}
       onClick={(e) => {
         if (onClick) {
-          e.preventDefault();
           onClick();
         }
       }}
