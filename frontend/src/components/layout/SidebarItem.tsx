@@ -4,6 +4,8 @@ import * as React from "react";
 import { LucideIcon } from "lucide-react";
 import Link from "next/link";
 
+import Link from "next/link";
+
 interface SidebarItemProps {
   label: string;
   icon: LucideIcon;

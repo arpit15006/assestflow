@@ -27,11 +27,16 @@ interface AppSidebarProps {
   activePath?: string;
 }
 
+import { usePathname } from "next/navigation";
+
 export function AppSidebar({
   collapsed = false,
   onToggle,
-  activePath = "/",
+  activePath: propActivePath,
 }: AppSidebarProps) {
+  const pathname = usePathname();
+  const activePath = propActivePath || pathname || "/";
+
   // Navigation mapping
   const coreNavItems = [
     { label: "Dashboard", icon: LayoutDashboard, href: "/" },
@@ -50,8 +55,8 @@ export function AppSidebar({
   ];
 
   const utilityNavItems = [
-    { label: "Reports", icon: BarChart3, href: "#reports" },
-    { label: "Notifications", icon: Bell, href: "#notifications", badge: 4 },
+    { label: "Reports", icon: BarChart3, href: "/reports" },
+    { label: "Notifications", icon: Bell, href: "/notifications", badge: 4 },
     { label: "Settings", icon: Settings, href: "#settings" },
   ];
 
