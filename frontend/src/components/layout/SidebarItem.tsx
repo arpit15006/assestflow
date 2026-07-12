@@ -31,11 +31,11 @@ export function SidebarItem({
           onClick();
         }
       }}
-      className={`group flex items-center justify-between rounded-lg p-2.5 text-sm font-medium transition-all duration-150 relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40
+      className={`group flex items-center justify-between rounded-lg px-2.5 py-2 text-sm font-medium transition-all relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
         ${
           active
-            ? "bg-primary/5 text-primary"
-            : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
+            ? "bg-muted text-foreground font-semibold shadow-sm"
+            : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
         }
       `}
       aria-current={active ? "page" : undefined}
@@ -43,7 +43,7 @@ export function SidebarItem({
       <div className="flex items-center gap-3">
         <Icon
           className={`h-5 w-5 shrink-0 transition-colors ${
-            active ? "text-primary" : "text-zinc-400 group-hover:text-zinc-600"
+            active ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"
           }`}
         />
         {!collapsed && <span className="truncate">{label}</span>}
@@ -51,11 +51,11 @@ export function SidebarItem({
 
       {!collapsed && badge && (
         <span
-          className={`rounded-full px-2 py-0.5 text-xxs font-semibold shadow-2xs border
+          className={`rounded-full px-2 py-0.5 text-xxs font-semibold shadow-3xs border
             ${
               active
-                ? "bg-primary text-white border-primary"
-                : "bg-zinc-100 text-zinc-600 border-zinc-200"
+                ? "bg-primary text-primary-foreground border-transparent"
+                : "bg-muted text-muted-foreground border-border"
             }
           `}
         >
@@ -65,7 +65,7 @@ export function SidebarItem({
 
       {/* Collapsed Tooltip helper mapping on hover */}
       {collapsed && (
-        <div className="absolute left-14 bg-zinc-900 text-white text-xs font-semibold rounded-md py-1 px-2.5 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 shadow-md whitespace-nowrap z-50">
+        <div className="absolute left-14 bg-foreground text-background text-[11px] font-semibold rounded-md py-1.5 px-2.5 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 shadow-md whitespace-nowrap z-50">
           {label}
         </div>
       )}

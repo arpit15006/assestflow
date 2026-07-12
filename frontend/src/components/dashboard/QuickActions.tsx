@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Plus, CalendarPlus, ShieldAlert, LucideIcon } from "lucide-react";
-import { Card, CardContent } from "../ui/Card";
+import { Card } from "../ui/Card";
 import { Button } from "../ui/Button";
 
 interface ActionItem {
@@ -45,31 +45,29 @@ export function QuickActions() {
         return (
           <Card
             key={action.title}
-            className="hover:border-zinc-300 transition-all hover:shadow-xs group duration-200"
+            className="p-5 flex flex-col justify-between h-full space-y-4 hover:border-zinc-300 hover:shadow-xs group duration-200 cursor-default"
           >
-            <CardContent className="p-5 flex flex-col justify-between h-full space-y-4">
-              <div className="space-y-1.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/5 text-primary">
-                  <IconComponent className="h-5 w-5" />
-                </div>
-                <h4 className="text-sm font-bold text-zinc-800 tracking-tight">
-                  {action.title}
-                </h4>
-                <p className="text-xs text-zinc-500 leading-normal">
-                  {action.description}
-                </p>
+            <div className="space-y-2">
+              <div className="p-2 bg-muted rounded-lg w-fit group-hover:bg-muted/80 transition-colors text-muted-foreground group-hover:text-foreground">
+                <IconComponent className="h-4.5 w-4.5" />
               </div>
+              <h4 className="text-sm font-semibold tracking-tight text-foreground">
+                {action.title}
+              </h4>
+              <p className="text-xs text-muted-foreground leading-normal">
+                {action.description}
+              </p>
+            </div>
 
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="w-full text-xs font-semibold group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all duration-200"
-                onClick={action.onClick}
-              >
-                {action.actionText}
-              </Button>
-            </CardContent>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full text-xs font-medium border border-border text-foreground hover:bg-muted bg-background shadow-sm active:scale-95 transition-all duration-200"
+              onClick={action.onClick}
+            >
+              {action.actionText}
+            </Button>
           </Card>
         );
       })}

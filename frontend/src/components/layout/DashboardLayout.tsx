@@ -31,7 +31,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50/50 text-zinc-950 font-sans">
+    <div className="min-h-screen bg-background text-foreground font-sans transition-colors duration-300">
       {/* 1. Desktop Sidebar Container */}
       <div className="hidden md:block">
         <AppSidebar collapsed={collapsed} onToggle={toggleSidebar} activePath={pathname} />
@@ -47,13 +47,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           />
 
           {/* Sliding sidebar container */}
-          <div className="relative flex w-64 max-w-xs flex-col bg-white animate-in slide-in-from-left duration-250">
+          <div className="relative flex w-64 max-w-xs flex-col bg-card animate-in slide-in-from-left duration-250">
             {/* Close button inside drawer */}
             <div className="absolute top-4 right-4 z-50">
               <button
                 type="button"
                 onClick={closeMobileMenu}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 text-zinc-400 hover:text-zinc-600 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors"
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors"
                 aria-label="Close mobile navigation"
               >
                 <X className="h-4 w-4" />
