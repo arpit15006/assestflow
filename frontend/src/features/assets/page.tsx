@@ -2,20 +2,61 @@
 
 import * as React from "react";
 import { motion } from "framer-motion";
-import { initialAssets } from "./data";
 import { Asset } from "./types";
 import { AssetTable } from "./components/AssetTable";
 import { AssetFilters } from "./components/AssetFilters";
 import { AssetToolbar } from "./components/AssetToolbar";
 import { RegisterAssetDialog } from "./components/RegisterAssetDialog";
 import { useToast } from "@/components/ui/Toast";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { assetsApi } from "@/lib/api/assets";
 
 export default function AssetsPage() {
   const { toast } = useToast();
-  const [assets, setAssets] = React.useState<Asset[]>(initialAssets);
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = React.useState("");
   const [showRegisterDialog, setShowRegisterDialog] = React.useState(false);
-  const [isRefreshing, setIsRefreshing] = React.useState(false);
+
+  const { data: serverAssets, isLoading, refetch } = useQuery({
+    queryKey: ["assets"],
+    queryFn: () => assetsApi.list(),
+  });
+
+  const assets = React.useMemo(() => {
+    const list = serverAssets?.assets || (Array.isArray(serverAssets) ? serverAssets : []);
+    return list.map((asset: any) => ({
+      ...asset,
+      assignedTo: asset.allocations?.find((a: any) => a.status === "ACTIVE")?.user?.name || "--",
+      lastUpdated: asset.updatedAt ? new Date(asset.updatedAt).toISOString().split("T")[0] : "--",
+      status: asset.status.charAt(0) + asset.status.slice(1).toLowerCase(),
+      condition: asset.condition.charAt(0) + asset.condition.slice(1).toLowerCase(),
+      category: asset.category?.name || "Hardware",
+      department: asset.department?.name || "--",
+    }));
+  }, [serverAssets]);
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => assetsApi.delete(id),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ["assets"] });
+      toast({ type: "success", title: "Asset deleted", description: `Asset has been successfully removed.` });
+    },
+    onError: (err: any) => {
+      toast({ type: "error", title: "Delete failed", description: err?.response?.data?.message || "Could not delete asset." });
+    }
+  });
+
+  const registerMutation = useMutation({
+    mutationFn: (data: any) => assetsApi.create(data),
+    onSuccess: (newAsset) => {
+      queryClient.invalidateQueries({ queryKey: ["assets"] });
+      toast({ type: "success", title: "Asset registered", description: `${newAsset.name} added successfully.` });
+      setShowRegisterDialog(false);
+    },
+    onError: (err: any) => {
+      toast({ type: "error", title: "Registration failed", description: err?.response?.data?.message || "Could not register asset." });
+    }
+  });
 
   const [filters, setFilters] = React.useState({
     category: "all",
@@ -33,28 +74,34 @@ export default function AssetsPage() {
     setFilters({ category: "all", status: "all", department: "all", location: "all", condition: "all" });
   };
 
-  const handleRowAction = (action: string, item: Asset) => {
+  const handleRowAction = (action: string, item: any) => {
     if (action === "Delete") {
-      setAssets((prev) => prev.filter((a) => a.id !== item.id));
-      toast({ type: "success", title: "Asset deleted", description: `${item.name} (${item.assetTag}) has been removed.` });
+      deleteMutation.mutate(item.id);
       return;
     }
     if (action === "Archive") {
-      setAssets((prev) => prev.map((a) => (a.id === item.id ? { ...a, status: "Retired" } : a)));
-      toast({ type: "info", title: "Asset archived", description: `${item.name} marked as Retired.` });
+      assetsApi.update(item.id, { status: "RETIRED" })
+        .then(() => {
+          queryClient.invalidateQueries({ queryKey: ["assets"] });
+          toast({ type: "info", title: "Asset archived", description: `${item.name} marked as Retired.` });
+        });
       return;
     }
     if (action === "Duplicate") {
-      const generatedTag = `AF-${Math.floor(1000 + Math.random() * 9000)}`;
-      const duplicate: Asset = {
-        ...item,
-        id: `asset-${Date.now()}`,
-        assetTag: generatedTag,
+      const generatedSerial = `SN-DUP-${Math.floor(100000 + Math.random() * 900000)}`;
+      assetsApi.create({
         name: `${item.name} (Copy)`,
-        lastUpdated: new Date().toISOString().split("T")[0],
-      };
-      setAssets((prev) => [duplicate, ...prev]);
-      toast({ type: "success", title: "Asset duplicated", description: `New asset created with tag ${generatedTag}.` });
+        serialNumber: generatedSerial,
+        categoryId: item.categoryId || "c-1", // Use item's categoryId or standard fallback
+        acquisitionDate: new Date().toISOString(),
+        acquisitionCost: Number(item.acquisitionCost) || 0,
+        condition: "NEW",
+        location: item.location || "HQ Mumbai",
+        isShared: item.isShared || false,
+      }).then(() => {
+        queryClient.invalidateQueries({ queryKey: ["assets"] });
+        toast({ type: "success", title: "Asset duplicated", description: "New duplicate asset created." });
+      });
       return;
     }
     if (action === "View") {
@@ -68,27 +115,26 @@ export default function AssetsPage() {
   };
 
   const handleRegisterAsset = (
-    newAsset: Omit<Asset, "id" | "assetTag" | "lastUpdated" | "assignedTo" | "status">
+    newAsset: any
   ) => {
-    const generatedTag = `AF-${Math.floor(1000 + Math.random() * 9000)}`;
-    const asset: Asset = {
-      ...newAsset,
-      id: `asset-${Date.now()}`,
-      assetTag: generatedTag,
-      status: "Available",
-      assignedTo: "--",
-      lastUpdated: new Date().toISOString().split("T")[0],
-    };
-    setAssets((prev) => [asset, ...prev]);
-    toast({ type: "success", title: "Asset registered", description: `${asset.name} added with tag ${generatedTag}.` });
+    // Generate placeholder serial number if empty for test convenience
+    const serial = newAsset.serialNumber || `SN-REG-${Date.now()}`;
+    registerMutation.mutate({
+      name: newAsset.name,
+      serialNumber: serial,
+      categoryId: newAsset.categoryId || "c-1",
+      acquisitionDate: newAsset.purchaseDate ? new Date(newAsset.purchaseDate).toISOString() : new Date().toISOString(),
+      acquisitionCost: Number(newAsset.purchaseCost) || 0,
+      condition: (newAsset.condition || "NEW").toUpperCase(),
+      location: newAsset.location || "HQ Mumbai",
+      isShared: newAsset.isShared || false,
+    });
   };
 
   const handleRefresh = () => {
-    setIsRefreshing(true);
-    setTimeout(() => {
-      setIsRefreshing(false);
+    refetch().then(() => {
       toast({ type: "success", title: "Data refreshed", description: "Asset directory is up to date." });
-    }, 800);
+    });
   };
 
   return (
@@ -113,7 +159,10 @@ export default function AssetsPage() {
         onRegisterClick={() => setShowRegisterDialog(true)}
         onRefresh={handleRefresh}
         assets={assets}
-        onImportAssets={(imported) => setAssets((prev) => [...imported, ...prev])}
+        onImportAssets={() => {
+          queryClient.invalidateQueries({ queryKey: ["assets"] });
+          toast({ type: "success", title: "Mock Import", description: "Import CSV workflow simulation completed." });
+        }}
       />
 
       <AssetFilters

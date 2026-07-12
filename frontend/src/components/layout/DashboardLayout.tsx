@@ -5,6 +5,7 @@ import { AppSidebar } from "./AppSidebar";
 import { TopNavbar } from "./TopNavbar";
 import { X } from "lucide-react";
 import { usePathname } from "next/navigation";
+import { ProtectedRoute } from "../auth/ProtectedRoute";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -74,7 +75,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <TopNavbar onMobileMenuToggle={toggleMobileMenu} collapsed={collapsed} />
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 w-full space-y-6">
-          {children}
+          <ProtectedRoute>
+            {children}
+          </ProtectedRoute>
         </main>
       </div>
     </div>

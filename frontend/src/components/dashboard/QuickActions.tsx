@@ -1,10 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { Plus, CalendarPlus, ShieldAlert, LucideIcon } from "lucide-react";
+import { Plus, CalendarPlus, ShieldAlert } from "lucide-react";
 import { Card } from "../ui/Card";
 import { Button } from "../ui/Button";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth/AuthContext";
+import { PERMISSIONS } from "@/lib/rbac/roles";
 
 interface QuickActionsProps {
   onRegisterClick?: () => void;
@@ -12,33 +14,48 @@ interface QuickActionsProps {
 
 export function QuickActions({ onRegisterClick }: QuickActionsProps) {
   const router = useRouter();
+  const { hasPermission } = useAuth();
 
-  const actions = [
-    {
-      title: "Register Asset",
-      description: "Onboard new hardware or equipment into the registry.",
-      icon: Plus,
-      actionText: "New Asset",
-      onClick: () => onRegisterClick?.(),
-    },
-    {
-      title: "Book Resource",
-      description: "Schedule vehicle slots, meeting rooms, or cameras.",
-      icon: CalendarPlus,
-      actionText: "Reserve",
-      onClick: () => router.push("/bookings"),
-    },
-    {
-      title: "Raise Maintenance Request",
-      description: "Report damaged assets and schedule repairs.",
-      icon: ShieldAlert,
-      actionText: "Report Issue",
-      onClick: () => router.push("/maintenance"),
-    },
-  ];
+  const actions = React.useMemo(() => {
+    const list = [];
+
+    if (hasPermission(PERMISSIONS.asset.create)) {
+      list.push({
+        title: "Register Asset",
+        description: "Onboard new hardware or equipment into the registry.",
+        icon: Plus,
+        actionText: "New Asset",
+        onClick: () => onRegisterClick?.(),
+      });
+    }
+
+    if (hasPermission(PERMISSIONS.booking.create)) {
+      list.push({
+        title: "Book Resource",
+        description: "Schedule vehicle slots, meeting rooms, or cameras.",
+        icon: CalendarPlus,
+        actionText: "Reserve",
+        onClick: () => router.push("/bookings"),
+      });
+    }
+
+    if (hasPermission(PERMISSIONS.maintenance.create)) {
+      list.push({
+        title: "Raise Maintenance Request",
+        description: "Report damaged assets and schedule repairs.",
+        icon: ShieldAlert,
+        actionText: "Report Issue",
+        onClick: () => router.push("/maintenance"),
+      });
+    }
+
+    return list;
+  }, [hasPermission, onRegisterClick, router]);
+
+  if (actions.length === 0) return null;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className={`grid grid-cols-1 md:grid-cols-${actions.length} gap-4`}>
       {actions.map((action) => {
         const IconComponent = action.icon;
         return (

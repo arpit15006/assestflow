@@ -14,47 +14,123 @@ import { AddCategoryDialog } from "./components/AddCategoryDialog";
 import { AddEmployeeDialog } from "./components/AddEmployeeDialog";
 import { useToast } from "@/components/ui/Toast";
 
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { departmentsApi } from "@/lib/api/departments";
+import { api } from "@/lib/api/client";
+
 export default function OrganizationPage() {
   const { toast } = useToast();
-  const [departments, setDepartments] = React.useState<Department[]>(initialDepartments);
+  const queryClient = useQueryClient();
+
+  const { data: serverDepts, isLoading: loadingDepts, refetch: refetchDepts } = useQuery({
+    queryKey: ["departments"],
+    queryFn: () => departmentsApi.list(),
+  });
+
+  const { data: serverUsers, isLoading: loadingUsers, refetch: refetchUsers } = useQuery({
+    queryKey: ["users"],
+    queryFn: async () => {
+      const res = await api.get("/users");
+      return res.data?.data;
+    },
+  });
+
+  const departments = React.useMemo<Department[]>(() => {
+    if (!serverDepts) return [];
+    return serverDepts.map((d: any) => ({
+      id: d.id,
+      name: d.name,
+      manager: d.manager?.name || "--",
+      parentDepartment: d.parentDepartment?.name || "--",
+      employeesCount: d._count?.users || 0,
+      status: d.status === "ACTIVE" ? "Active" : "Inactive",
+    }));
+  }, [serverDepts]);
+
   const [categories, setCategories] = React.useState<Category[]>(initialCategories);
-  const [employees, setEmployees] = React.useState<Employee[]>(initialEmployees);
-  const [isRefreshing, setIsRefreshing] = React.useState(false);
+
+  const employees = React.useMemo<Employee[]>(() => {
+    if (!serverUsers) return [];
+    return serverUsers.map((u: any) => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      role: u.role,
+      department: u.department?.name || "--",
+      status: u.status === "ACTIVE" ? "Active" : "Inactive",
+    }));
+  }, [serverUsers]);
 
   const [searchQuery, setSearchQuery] = React.useState("");
-  const [activeTab, setActiveTab] = React.useState<"departments" | "categories" | "employees">("departments");
+  const [activeTab, setActiveTab] = React.useState<"departments" | "categories" | "employees" | any>("departments");
   const [activeDialog, setActiveDialog] = React.useState<"departments" | "categories" | "employees" | null>(null);
+
+  const deleteDepartmentMutation = useMutation({
+    mutationFn: (id: string) => departmentsApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["departments"] });
+      toast({ type: "success", title: "Deleted", description: "Department deleted successfully." });
+    },
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/users/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast({ type: "success", title: "Deactivated", description: "Employee status updated to inactive." });
+    },
+  });
+
+  const promoteUserMutation = useMutation({
+    mutationFn: ({ id, role }: { id: string; role: string }) => api.patch(`/users/${id}/role`, { role }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast({ type: "success", title: "Employee role updated" });
+    },
+  });
+
+  const createDepartmentMutation = useMutation({
+    mutationFn: (data: any) => departmentsApi.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["departments"] });
+      toast({ type: "success", title: "Department created" });
+      setActiveDialog(null);
+    },
+  });
 
   const handleRowAction = (action: string, item: Department | Category | Employee) => {
     if (action === "Delete") {
       if (activeTab === "departments") {
-        setDepartments((prev) => prev.filter((d) => d.id !== item.id));
+        deleteDepartmentMutation.mutate(item.id);
       } else if (activeTab === "categories") {
         setCategories((prev) => prev.filter((c) => c.id !== item.id));
+        toast({ type: "success", title: "Deleted" });
       } else {
-        setEmployees((prev) => prev.filter((e) => e.id !== item.id));
+        deleteUserMutation.mutate(item.id);
       }
-      toast({ type: "success", title: "Deleted", description: `${item.name} has been removed.` });
       return;
     }
 
     if (action === "Archive" || action === "Deactivate") {
       if (activeTab === "departments") {
-        setDepartments((prev) => prev.map((d) => (d.id === item.id ? { ...d, status: "Inactive" } : d)));
+        departmentsApi.update(item.id, { status: "INACTIVE" }).then(() => {
+          queryClient.invalidateQueries({ queryKey: ["departments"] });
+          toast({ type: "info", title: "Deactivated" });
+        });
       } else if (activeTab === "categories") {
         setCategories((prev) => prev.map((c) => (c.id === item.id ? { ...c, status: "Inactive" } : c)));
+        toast({ type: "info", title: "Deactivated" });
       } else {
-        setEmployees((prev) => prev.map((e) => (e.id === item.id ? { ...e, status: "Inactive" } : e)));
+        deleteUserMutation.mutate(item.id);
       }
-      toast({ type: "info", title: "Deactivated", description: `${item.name} has been set to Inactive.` });
       return;
     }
 
     if (action === "Promote" && activeTab === "employees") {
-      setEmployees((prev) =>
-        prev.map((e) => (e.id === item.id ? { ...e, role: `Lead ${e.role}` } : e))
-      );
-      toast({ type: "success", title: "Employee promoted", description: `${item.name} has been promoted.` });
+      // Switch next role level
+      const currentRole = (item as Employee).role;
+      const nextRole = currentRole === "EMPLOYEE" ? "DEPARTMENT_HEAD" : currentRole === "DEPARTMENT_HEAD" ? "ASSET_MANAGER" : "ADMIN";
+      promoteUserMutation.mutate({ id: item.id, role: nextRole });
       return;
     }
 
@@ -65,14 +141,9 @@ export default function OrganizationPage() {
   };
 
   const handleAddDepartment = (newDept: Omit<Department, "id" | "employeesCount" | "status">) => {
-    const dept: Department = {
-      ...newDept,
-      id: `dept-${Date.now()}`,
-      status: "Active",
-      employeesCount: 0,
-    };
-    setDepartments((prev) => [dept, ...prev]);
-    toast({ type: "success", title: "Department created", description: `"${dept.name}" has been added.` });
+    createDepartmentMutation.mutate({
+      name: newDept.name,
+    });
   };
 
   const handleAddCategory = (newCat: Omit<Category, "id" | "assetsCount" | "status">) => {
@@ -84,24 +155,27 @@ export default function OrganizationPage() {
     };
     setCategories((prev) => [cat, ...prev]);
     toast({ type: "success", title: "Category created", description: `"${cat.name}" has been added.` });
+    setActiveDialog(null);
   };
 
   const handleAddEmployee = (newEmp: Omit<Employee, "id" | "status">) => {
-    const emp: Employee = {
-      ...newEmp,
-      id: `emp-${Date.now()}`,
-      status: "Active",
-    };
-    setEmployees((prev) => [emp, ...prev]);
-    toast({ type: "success", title: "Employee added", description: `${emp.name} has been registered.` });
+    api.post("/auth/register", {
+      name: newEmp.name,
+      email: newEmp.email,
+      password: "Password123!", // Standard default password
+    }).then(() => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast({ type: "success", title: "Employee added", description: `${newEmp.name} has been registered.` });
+      setActiveDialog(null);
+    }).catch((err) => {
+      toast({ type: "error", title: "Register failed", description: err?.response?.data?.message || "Error" });
+    });
   };
 
   const handleRefresh = () => {
-    setIsRefreshing(true);
-    setTimeout(() => {
-      setIsRefreshing(false);
+    Promise.all([refetchDepts(), refetchUsers()]).then(() => {
       toast({ type: "success", title: "Data refreshed", description: "Organization data is up to date." });
-    }, 800);
+    });
   };
 
   return (

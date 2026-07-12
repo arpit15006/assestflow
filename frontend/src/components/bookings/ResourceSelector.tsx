@@ -5,9 +5,11 @@ import { MapPin, Users, CalendarDays, Car, Presentation, Landmark, Layers } from
 interface ResourceSelectorProps {
   selectedResourceId: string;
   onSelect: (resourceId: string) => void;
+  resources?: any[];
 }
 
-export function ResourceSelector({ selectedResourceId, onSelect }: ResourceSelectorProps) {
+export function ResourceSelector({ selectedResourceId, onSelect, resources }: ResourceSelectorProps) {
+  const resourceList = resources && resources.length > 0 ? resources : MOCK_RESOURCES;
   
   const getResourceIcon = (type: string) => {
     switch (type) {
@@ -29,7 +31,7 @@ export function ResourceSelector({ selectedResourceId, onSelect }: ResourceSelec
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {MOCK_RESOURCES.map(res => {
+        {resourceList.map(res => {
           const isSelected = res.id === selectedResourceId;
           return (
             <div

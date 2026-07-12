@@ -9,6 +9,8 @@ import { Checkbox } from "../ui/Checkbox";
 import { PasswordInput } from "./PasswordInput";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 
+import { useAuth } from "../../lib/auth/AuthContext";
+
 // Form Validation Schema using Zod
 const loginSchema = z.object({
   email: z
@@ -30,6 +32,7 @@ interface LoginFormProps {
 }
 
 export function LoginForm({ onSuccess, loading, setLoading }: LoginFormProps) {
+  const { login } = useAuth();
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = React.useState<boolean>(false);
 
@@ -56,14 +59,11 @@ export function LoginForm({ onSuccess, loading, setLoading }: LoginFormProps) {
     setSubmitSuccess(false);
 
     try {
-      // Simulate API verification call for 1.5 seconds
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      // Mock success for demonstrations
+      await login(data.email, data.password);
       setSubmitSuccess(true);
       onSuccess(data);
-    } catch (err) {
-      setSubmitError("Invalid email or password. Please try again.");
+    } catch (err: any) {
+      setSubmitError(err?.message || "Invalid email or password. Please try again.");
     } finally {
       setLoading(false);
     }

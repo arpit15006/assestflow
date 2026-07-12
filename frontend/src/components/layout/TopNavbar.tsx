@@ -4,7 +4,7 @@ import * as React from "react";
 import { Bell, Menu, Search, LogOut, User, Settings } from "lucide-react";
 import { Breadcrumbs } from "./Breadcrumbs";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { currentUser } from "@/lib/mock/users";
+import { useAuth } from "../../lib/auth/AuthContext";
 import { usePathname, useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
 
@@ -14,6 +14,7 @@ interface TopNavbarProps {
 }
 
 export function TopNavbar({ onMobileMenuToggle, collapsed }: TopNavbarProps) {
+  const { user, logout } = useAuth();
   const [searchValue, setSearchValue] = React.useState("");
   const [bellAnimated, setBellAnimated] = React.useState(false);
   const pathname = usePathname();
@@ -117,10 +118,10 @@ export function TopNavbar({ onMobileMenuToggle, collapsed }: TopNavbarProps) {
             >
               <div className="hidden lg:flex flex-col text-right">
                 <span className="text-xs font-semibold text-foreground leading-none">
-                  {currentUser.name}
+                  {user?.name}
                 </span>
                 <span className="text-[10px] text-muted-foreground mt-1.5">
-                  {currentUser.role.replace("_", " ")}
+                  {user?.role?.replace("_", " ")}
                 </span>
               </div>
               <div className="w-8 h-8 rounded-full bg-muted border border-border flex items-center justify-center text-muted-foreground">
@@ -136,8 +137,8 @@ export function TopNavbar({ onMobileMenuToggle, collapsed }: TopNavbarProps) {
               sideOffset={5}
             >
               <div className="px-2.5 py-2 border-b border-border mb-1">
-                <p className="text-xs font-bold text-foreground">{currentUser.name}</p>
-                <p className="text-[10px] text-muted-foreground truncate mt-1">{currentUser.email}</p>
+                <p className="text-xs font-bold text-foreground">{user?.name}</p>
+                <p className="text-[10px] text-muted-foreground truncate mt-1">{user?.email}</p>
               </div>
 
               <DropdownMenu.Item
@@ -159,7 +160,7 @@ export function TopNavbar({ onMobileMenuToggle, collapsed }: TopNavbarProps) {
               <DropdownMenu.Separator className="h-px bg-border my-1" />
 
               <DropdownMenu.Item
-                onClick={() => router.push("/")}
+                onClick={logout}
                 className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-destructive hover:bg-destructive/10 focus-visible:outline-none cursor-pointer"
               >
                 <LogOut className="h-3.5 w-3.5 text-destructive" />

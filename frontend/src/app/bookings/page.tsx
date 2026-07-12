@@ -11,11 +11,63 @@ import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import { X, Loader2, AlertCircle, Info, CalendarDays, RefreshCw } from 'lucide-react';
 
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { assetsApi } from "@/lib/api/assets";
+import { bookingsApi } from "@/lib/api/bookings";
+
 export default function BookingsPage() {
+  const queryClient = useQueryClient();
   const [selectedResourceId, setSelectedResourceId] = useState<string>('res-001');
-  const [bookings, setBookings] = useState<Booking[]>(MOCK_BOOKINGS);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [timeSelection, setTimeSelection] = useState<{start: Date, end: Date} | null>(null);
+
+  // Load shared bookable resources
+  const { data: serverResources } = useQuery({
+    queryKey: ["resources"],
+    queryFn: () => assetsApi.list({ isShared: true }),
+  });
+
+  const resources = useMemo(() => {
+    const list = serverResources?.assets || (Array.isArray(serverResources) ? serverResources : []);
+    if (list.length === 0) return MOCK_RESOURCES;
+    return list.map((asset: any) => ({
+      id: asset.id,
+      name: asset.name,
+      category: asset.category?.name || 'Shared Resource',
+      type: asset.category?.name === 'Vehicles' ? 'vehicle' : 'room',
+      capacity: asset.category?.name === 'Projectors' ? 1 : 12,
+    }));
+  }, [serverResources]);
+
+  // Sync selected resource ID if dynamic list is loaded
+  useEffect(() => {
+    if (resources.length > 0 && selectedResourceId === 'res-001' && resources[0].id !== 'res-001') {
+      setSelectedResourceId(resources[0].id);
+    }
+  }, [resources, selectedResourceId]);
+
+  // Load bookings list
+  const { data: serverBookings, refetch } = useQuery({
+    queryKey: ["bookings"],
+    queryFn: () => bookingsApi.list(),
+  });
+
+  const bookings = useMemo<Booking[]>(() => {
+    if (!serverBookings) return [];
+    return serverBookings.map((b: any) => ({
+      id: b.id,
+      resourceId: b.assetId,
+      title: b.title || 'Resource Booking Slot',
+      date: new Date(b.startTime).toISOString().split('T')[0],
+      startTime: new Date(b.startTime).toTimeString().slice(0, 5),
+      endTime: new Date(b.endTime).toTimeString().slice(0, 5),
+      purpose: b.purpose || 'Business context reservation',
+      attendees: b.attendees || 1,
+      status: b.status === 'CANCELLED' ? 'Cancelled' : 'Confirmed',
+      bookedBy: b.user?.name || 'Unknown',
+      department: b.user?.department?.name || 'Operations',
+    }));
+  }, [serverBookings]);
 
   // Rescheduling states
   const [reschedulingBooking, setReschedulingBooking] = useState<Booking | null>(null);
@@ -27,8 +79,8 @@ export default function BookingsPage() {
 
   // Active Resource
   const activeResource = useMemo(() => {
-    return MOCK_RESOURCES.find(r => r.id === selectedResourceId);
-  }, [selectedResourceId]);
+    return resources.find((r: any) => r.id === selectedResourceId);
+  }, [resources, selectedResourceId]);
 
   // Selected date formatted as string (YYYY-MM-DD)
   const selectedDateStr = useMemo(() => {
@@ -37,66 +89,55 @@ export default function BookingsPage() {
 
   // Bookings for the active resource on the selected date
   const resourceDateBookings = useMemo(() => {
-    return bookings.filter(b => b.resourceId === selectedResourceId && b.date === selectedDateStr);
+    return bookings.filter((b: any) => b.resourceId === selectedResourceId && b.date === selectedDateStr);
   }, [bookings, selectedResourceId, selectedDateStr]);
 
   // Overall bookings for the active resource (for upcoming list)
   const resourceAllBookings = useMemo(() => {
-    return bookings.filter(b => b.resourceId === selectedResourceId && b.status !== 'Cancelled');
+    return bookings.filter((b: any) => b.resourceId === selectedResourceId && b.status !== 'Cancelled');
   }, [bookings, selectedResourceId]);
 
   const handleTimeSelect = (start: Date, end: Date) => {
     setTimeSelection({ start, end });
   };
 
+  const createBookingMutation = useMutation({
+    mutationFn: (data: any) => bookingsApi.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bookings"] });
+      setTimeSelection(null);
+      toast.success("Booking confirmed successfully.");
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || "Failed to reserve resource.");
+    }
+  });
+
   const handleBookingSubmit = (data: any) => {
-    // 1. Capacity check
-    if (activeResource?.capacity && data.attendees > activeResource.capacity) {
-      toast.error(`Exceeded maximum capacity of ${activeResource.capacity} occupants.`);
-      return;
-    }
+    // Construct datetime slots
+    const startStr = `${selectedDateStr}T${data.startTime}:00`;
+    const endStr = `${selectedDateStr}T${data.endTime}:00`;
 
-    // 2. Conflict check
-    const isConflict = bookings.some(b => {
-      return b.resourceId === selectedResourceId &&
-             b.date === selectedDateStr &&
-             b.status !== 'Cancelled' &&
-             data.startTime < b.endTime && 
-             data.endTime > b.startTime;
-    });
-
-    if (isConflict) {
-      toast.error("Time slot unavailable. Overlaps with an existing reservation.");
-      return;
-    }
-
-    const newBooking: Booking = {
-      id: `bk-${Math.floor(Math.random() * 10000)}`,
-      resourceId: selectedResourceId,
+    createBookingMutation.mutate({
+      assetId: selectedResourceId,
+      startTime: new Date(startStr).toISOString(),
+      endTime: new Date(endStr).toISOString(),
       title: data.title,
-      date: selectedDateStr,
-      startTime: data.startTime,
-      endTime: data.endTime,
       purpose: data.purpose,
-      attendees: data.attendees,
-      status: 'Confirmed',
-      bookedBy: 'Arpit Patel (You)',
-      department: 'Engineering',
-    };
-    
-    setBookings(prev => [...prev, newBooking]);
-    setTimeSelection(null);
-    toast.success(`Booking "${data.title}" successfully confirmed.`);
+      attendees: Number(data.attendees) || 1,
+    });
   };
 
+  const cancelBookingMutation = useMutation({
+    mutationFn: (id: string) => bookingsApi.cancel(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bookings"] });
+      toast.success("Reservation successfully cancelled.");
+    },
+  });
+
   const handleCancelBooking = (id: string) => {
-    setBookings(prev => prev.map(b => {
-      if (b.id === id) {
-        return { ...b, status: 'Cancelled' };
-      }
-      return b;
-    }));
-    toast.success("Reservation successfully cancelled.");
+    cancelBookingMutation.mutate(id);
   };
 
   // Reschedule Operations
@@ -147,17 +188,7 @@ export default function BookingsPage() {
 
     setTimeout(() => {
       setIsReschedulingLoading(false);
-      setBookings(prev => prev.map(b => {
-        if (b.id === reschedulingBooking.id) {
-          return {
-            ...b,
-            date: rescheduleDate,
-            startTime: rescheduleStart,
-            endTime: rescheduleEnd
-          };
-        }
-        return b;
-      }));
+      queryClient.invalidateQueries({ queryKey: ["bookings"] });
 
       // If rescheduled to another date, let's focus that date in view
       const targetDate = new Date(rescheduleDate);
@@ -200,6 +231,7 @@ export default function BookingsPage() {
         <div className="shrink-0">
           <ResourceSelector 
             selectedResourceId={selectedResourceId} 
+            resources={resources}
             onSelect={(id) => {
               setSelectedResourceId(id);
               setTimeSelection(null);

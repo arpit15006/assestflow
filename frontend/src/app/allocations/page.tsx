@@ -11,30 +11,99 @@ import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import { Search, Filter, Layers, CheckCircle2, AlertCircle, Info, RefreshCw } from 'lucide-react';
 
-export default function AllocationsPage() {
-  const [assets, setAssets] = useState<Asset[]>(MOCK_ASSETS);
-  const [history, setHistory] = useState<AllocationHistoryRecord[]>(MOCK_ALLOCATION_HISTORY);
-  const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { assetsApi } from "@/lib/api/assets";
+import { allocationsApi } from "@/lib/api/allocations";
+import { api } from "@/lib/api/client";
 
-  // Filter states
+export default function AllocationsPage() {
+  const queryClient = useQueryClient();
+  const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [selectedStatus, setSelectedStatus] = useState<string>('All');
 
+  // Load live assets
+  const { data: serverAssets } = useQuery({
+    queryKey: ["assets"],
+    queryFn: () => assetsApi.list(),
+  });
+
+  const assets = useMemo(() => {
+    const list = serverAssets?.assets || (Array.isArray(serverAssets) ? serverAssets : []);
+    return list.map((asset: any) => ({
+      id: asset.id,
+      tag: asset.assetTag,
+      name: asset.name,
+      serialNumber: asset.serialNumber,
+      category: asset.category?.name || 'Hardware',
+      status: asset.status === 'AVAILABLE' ? 'Available' : asset.status === 'ALLOCATED' ? 'Allocated' : 'In Maintenance',
+      location: asset.location || 'HQ Mumbai',
+      condition: asset.condition || 'GOOD',
+      imageUrl: asset.images?.[0]?.url || null,
+      allocatedTo: asset.allocations?.find((a: any) => a.status === 'ACTIVE')?.user
+        ? {
+            id: asset.allocations.find((a: any) => a.status === 'ACTIVE').user.id,
+            name: asset.allocations.find((a: any) => a.status === 'ACTIVE').user.name,
+            department: asset.department?.name || 'Operations',
+            avatarUrl: `https://avatar.vercel.sh/${asset.allocations.find((a: any) => a.status === 'ACTIVE').user.name}`
+          }
+        : null
+    }));
+  }, [serverAssets]);
+
+  // Load live users/employees
+  const { data: serverUsers } = useQuery({
+    queryKey: ["users"],
+    queryFn: async () => {
+      const res = await api.get('/users');
+      return res.data?.data;
+    },
+  });
+
+  const employees = useMemo(() => {
+    if (!serverUsers) return [];
+    return serverUsers.map((u: any) => ({
+      id: u.id,
+      name: u.name,
+      department: u.department?.name || 'Operations',
+      avatarUrl: `https://avatar.vercel.sh/${u.name}`,
+    }));
+  }, [serverUsers]);
+
+  // Load live allocation history
+  const { data: serverAllocations } = useQuery({
+    queryKey: ["allocations"],
+    queryFn: () => allocationsApi.list(),
+  });
+
+  const history = useMemo(() => {
+    if (!serverAllocations) return [];
+    return serverAllocations.map((a: any) => ({
+      id: a.id,
+      date: new Date(a.allocatedAt).toISOString().split('T')[0],
+      allocatedTo: a.user?.name || '--',
+      department: a.department?.name || 'Operations',
+      status: a.status === 'ACTIVE' ? 'Allocated' : 'Returned',
+      returnedBy: a.status === 'RETURNED' ? a.user?.name : undefined,
+      returnCondition: a.returnCondition,
+    }));
+  }, [serverAllocations]);
+
   // Selected Asset (reactive)
   const selectedAsset = useMemo(() => {
-    return assets.find(a => a.id === selectedAssetId) || null;
+    return assets.find((a: any) => a.id === selectedAssetId) || null;
   }, [assets, selectedAssetId]);
 
   // Derived filter categories
-  const categories = useMemo(() => {
-    const list = new Set(assets.map(a => a.category));
-    return ['All', ...Array.from(list)];
+  const categories = useMemo<string[]>(() => {
+    const list = new Set(assets.map((a: any) => a.category as string));
+    return ['All', ...Array.from(list)] as string[];
   }, [assets]);
 
   // Filtered assets list
   const filteredAssets = useMemo(() => {
-    return assets.filter(a => {
+    return assets.filter((a: any) => {
       const matchesSearch = 
         a.tag.toLowerCase().includes(searchTerm.toLowerCase()) ||
         a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -51,75 +120,34 @@ export default function AllocationsPage() {
     setSearchTerm(term);
   };
 
+  const allocateMutation = useMutation({
+    mutationFn: (data: { assetId: string; userId: string; expectedReturnDate?: string; notes?: string }) =>
+      allocationsApi.allocate(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["assets"] });
+      queryClient.invalidateQueries({ queryKey: ["allocations"] });
+      toast.success("Asset successfully allocated.");
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || "Failed to allocate asset.");
+    }
+  });
+
   const handleAllocate = (assetId: string, employeeId: string, reason: string) => {
-    const employee = MOCK_EMPLOYEES.find(e => e.id === employeeId);
-    if (!employee) return;
-
-    setAssets(prev => prev.map(a => {
-      if (a.id === assetId) {
-        return {
-          ...a,
-          status: 'Allocated',
-          allocatedTo: employee,
-          expectedReturnDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 1 year
-        };
-      }
-      return a;
-    }));
-
-    const newHistoryRecord: AllocationHistoryRecord = {
-      id: `hist-${Date.now()}`,
-      date: new Date().toISOString().split('T')[0],
-      allocatedTo: employee.name,
-      department: employee.department,
-      status: 'Allocated'
-    };
-
-    setHistory(prev => [newHistoryRecord, ...prev]);
-    toast.success(`Asset successfully allocated to ${employee.name}`);
+    // Standard Return Date placeholder: 1 year from now
+    const expected = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+    allocateMutation.mutate({
+      assetId,
+      userId: employeeId,
+      expectedReturnDate: expected,
+      notes: reason,
+    });
   };
 
   const handleTransfer = (assetId: string, toEmployeeId: string, reason: string) => {
-    const asset = assets.find(a => a.id === assetId);
-    const toEmployee = MOCK_EMPLOYEES.find(e => e.id === toEmployeeId);
-    if (!asset || !toEmployee) return;
-
-    const fromEmployee = asset.allocatedTo;
-
-    setAssets(prev => prev.map(a => {
-      if (a.id === assetId) {
-        return {
-          ...a,
-          status: 'Allocated',
-          allocatedTo: toEmployee,
-          expectedReturnDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 1 year
-        };
-      }
-      return a;
-    }));
-
-    const dateStr = new Date().toISOString().split('T')[0];
-
-    const returnRecord: AllocationHistoryRecord = {
-      id: `hist-${Date.now()}-ret`,
-      date: dateStr,
-      allocatedTo: fromEmployee?.name || 'Unknown',
-      department: fromEmployee?.department || 'Unknown',
-      returnedBy: fromEmployee?.name || 'Unknown',
-      returnCondition: asset.condition,
-      status: 'Returned'
-    };
-
-    const allocateRecord: AllocationHistoryRecord = {
-      id: `hist-${Date.now()}-alloc`,
-      date: dateStr,
-      allocatedTo: toEmployee.name,
-      department: toEmployee.department,
-      status: 'Allocated'
-    };
-
-    setHistory(prev => [allocateRecord, returnRecord, ...prev]);
-    toast.success(`Asset successfully transferred to ${toEmployee.name}`);
+    // 1. Process active return, then allocate
+    // Direct allocate to the new user on the backend automatically returns active assignment
+    handleAllocate(assetId, toEmployeeId, reason);
   };
 
   const getStatusBadge = (status: string) => {
@@ -211,7 +239,7 @@ export default function AllocationsPage() {
                   <p className="text-xs text-zinc-500 mt-0.5">Try widening your search terms or filters.</p>
                 </div>
               ) : (
-                filteredAssets.map(asset => (
+                filteredAssets.map((asset: any) => (
                   <div
                     key={asset.id}
                     onClick={() => setSelectedAssetId(asset.id)}
@@ -255,6 +283,7 @@ export default function AllocationsPage() {
                 
                 <AllocationForm 
                   asset={selectedAsset} 
+                  employees={employees}
                   onAllocate={handleAllocate}
                   onTransfer={handleTransfer}
                 />

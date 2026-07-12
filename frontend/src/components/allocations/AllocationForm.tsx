@@ -4,11 +4,13 @@ import { AlertCircle, ArrowRight, CheckCircle2, Loader2 } from 'lucide-react';
 
 interface AllocationFormProps {
   asset: Asset | null;
+  employees?: Employee[];
   onAllocate: (assetId: string, employeeId: string, reason: string) => void;
   onTransfer: (assetId: string, toEmployeeId: string, reason: string) => void;
 }
 
-export function AllocationForm({ asset, onAllocate, onTransfer }: AllocationFormProps) {
+export function AllocationForm({ asset, employees, onAllocate, onTransfer }: AllocationFormProps) {
+  const employeeList = employees && employees.length > 0 ? employees : MOCK_EMPLOYEES;
   const [selectedEmployee, setSelectedEmployee] = useState('');
   const [reason, setReason] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
@@ -149,7 +151,7 @@ export function AllocationForm({ asset, onAllocate, onTransfer }: AllocationForm
                     `}
                   >
                     <option value="" disabled>Select recipient...</option>
-                    {MOCK_EMPLOYEES.filter(emp => emp.id !== asset.allocatedTo?.id).map(emp => (
+                    {employeeList.filter(emp => emp.id !== asset.allocatedTo?.id).map(emp => (
                       <option key={emp.id} value={emp.id}>{emp.name} ({emp.department})</option>
                     ))}
                   </select>
@@ -169,7 +171,7 @@ export function AllocationForm({ asset, onAllocate, onTransfer }: AllocationForm
                   `}
                 >
                   <option value="" disabled>Choose an employee...</option>
-                  {MOCK_EMPLOYEES.map(emp => (
+                  {employeeList.map(emp => (
                     <option key={emp.id} value={emp.id}>{emp.name} ({emp.department})</option>
                   ))}
                 </select>

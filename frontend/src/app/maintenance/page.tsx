@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { MaintenanceKanbanBoard } from "@/components/maintenance/MaintenanceKanbanBoard";
 import { MaintenanceDetailsDialog } from "@/components/maintenance/MaintenanceDetailsDialog";
@@ -10,14 +10,56 @@ import { Plus } from 'lucide-react';
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { maintenanceApi } from "@/lib/api/maintenance";
+import { api } from "@/lib/api/client";
+
 export default function MaintenancePage() {
-  const [requests, setRequests] = useState<MaintenanceRequest[]>(MOCK_MAINTENANCE_REQUESTS);
+  const queryClient = useQueryClient();
   const [selectedRequest, setSelectedRequest] = useState<MaintenanceRequest | null>(null);
   const [isNewRequestOpen, setIsNewRequestOpen] = useState(false);
 
+  // Load maintenance requests
+  const { data: serverRequests, refetch } = useQuery({
+    queryKey: ["maintenance"],
+    queryFn: () => maintenanceApi.list(),
+  });
+
+  const requests = useMemo<MaintenanceRequest[]>(() => {
+    if (!serverRequests) return [];
+    return serverRequests.map((r: any) => ({
+      id: r.id,
+      assetName: r.asset?.name || 'Unknown Asset',
+      assetTag: r.asset?.assetTag || 'AF-XXXX',
+      description: r.description,
+      priority: r.priority.charAt(0) + r.priority.slice(1).toLowerCase(),
+      status: r.status === 'PENDING' ? 'Pending' 
+            : r.status === 'APPROVED' ? 'Approved' 
+            : r.status === 'TECHNICIAN_ASSIGNED' ? 'Technician Assigned' 
+            : r.status === 'IN_PROGRESS' ? 'In Progress' 
+            : r.status === 'RESOLVED' ? 'Resolved' 
+            : 'Closed',
+      requestedBy: r.reporter?.name || 'Unknown Reporter',
+      technician: r.technician?.name || undefined,
+      cost: r.cost ? Number(r.cost) : undefined,
+      dateRequested: new Date(r.createdAt).toISOString().split('T')[0],
+      comments: r.resolutionNotes ? [
+        {
+          id: 'res-1',
+          author: 'System',
+          date: new Date(r.updatedAt).toISOString().split('T')[0],
+          text: `Resolution Notes: ${r.resolutionNotes}`
+        }
+      ] : [],
+      activityLog: [
+        { date: new Date(r.createdAt).toLocaleDateString(), action: 'Request created' }
+      ]
+    }));
+  }, [serverRequests]);
+
   // Synchronize details dialog if selected request changes in the list
   const activeSelectedRequest = selectedRequest 
-    ? requests.find(r => r.id === selectedRequest.id) || null
+    ? requests.find((r: any) => r.id === selectedRequest.id) || null
     : null;
 
   const formatDateStr = (date: Date) => {
@@ -28,128 +70,86 @@ export default function MaintenancePage() {
     setSelectedRequest(request);
   };
 
+  const createRequestMutation = useMutation({
+    mutationFn: (data: any) => maintenanceApi.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["maintenance"] });
+      setIsNewRequestOpen(false);
+      toast.success("Maintenance request raised successfully.");
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || "Failed to create request.");
+    }
+  });
+
   const handleCreateRequestSubmit = (data: Omit<MaintenanceRequest, 'id' | 'status' | 'dateRequested' | 'comments' | 'activityLog'>) => {
-    const now = new Date();
-    const dateStr = formatDateStr(now);
-    const newId = `MR-0${Math.floor(100 + Math.random() * 900)}`;
-
-    const newRequest: MaintenanceRequest = {
-      ...data,
-      id: newId,
-      status: 'Pending',
-      dateRequested: now.toISOString().split('T')[0],
-      comments: [],
-      activityLog: [{ date: dateStr, action: `Request created by ${data.requestedBy}` }]
-    };
-
-    setRequests(prev => [newRequest, ...prev]);
-    toast.success(`Maintenance ticket ${newId} logged under Pending.`);
+    // Find asset ID in database if tag or name matched
+    // For convenience in prototyping, retrieve assets first or use hardcoded asset id
+    api.get("/assets").then((res) => {
+      const matched = res.data?.data?.assets?.find((a: any) => a.name.toLowerCase().includes(data.assetName.toLowerCase()) || a.assetTag === data.assetId);
+      const assetId = matched?.id || "a-1"; // Fallback to first available asset
+      createRequestMutation.mutate({
+        assetId,
+        description: data.description,
+        priority: data.priority.toUpperCase(),
+      });
+    });
   };
 
-  const handleStatusChange = (id: string, newStatus: MaintenanceStatus) => {
-    const now = new Date();
-    const dateStr = formatDateStr(now);
-
-    setRequests(prev => prev.map(req => {
-      if (req.id === id) {
-        return {
-          ...req,
-          status: newStatus,
-          activityLog: [
-            ...req.activityLog, 
-            { date: dateStr, action: `Status changed to ${newStatus}` }
-          ]
-        };
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) => {
+      if (status === 'APPROVED') {
+        return maintenanceApi.approve(id);
+      } else if (status === 'RESOLVED') {
+        return maintenanceApi.resolve(id, { resolutionNotes: 'Resolved successfully via board.' });
       }
-      return req;
-    }));
+      return Promise.resolve();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["maintenance"] });
+      toast.success("Status updated successfully.");
+    },
+  });
 
-    toast.success(`Ticket status updated to ${newStatus}`);
+  const handleStatusChange = (id: string, newStatus: MaintenanceStatus) => {
+    const backendStatus = newStatus === 'Pending' ? 'PENDING' 
+                        : newStatus === 'Approved' ? 'APPROVED' 
+                        : newStatus === 'Technician Assigned' ? 'TECHNICIAN_ASSIGNED' 
+                        : newStatus === 'In Progress' ? 'IN_PROGRESS' 
+                        : newStatus === 'Resolved' ? 'RESOLVED' 
+                        : 'CLOSED';
+    updateStatusMutation.mutate({ id, status: backendStatus });
   };
 
   const handleCardDrop = (id: string, newStatus: MaintenanceStatus) => {
-    const now = new Date();
-    const dateStr = formatDateStr(now);
-
-    setRequests(prev => prev.map(req => {
-      if (req.id === id) {
-        return {
-          ...req,
-          status: newStatus,
-          activityLog: [
-            ...req.activityLog, 
-            { date: dateStr, action: `Moved to ${newStatus} via Kanban board` }
-          ]
-        };
-      }
-      return req;
-    }));
-
-    toast.info(`Ticket ${id} moved to ${newStatus}`);
+    handleStatusChange(id, newStatus);
   };
 
   const handleAddComment = (id: string, text: string) => {
-    const now = new Date();
-    const dateStr = formatDateStr(now);
-
-    setRequests(prev => prev.map(req => {
-      if (req.id === id) {
-        const commentAuthor = text.startsWith('Resolution Notes:') ? 'System' : 'Admin (You)';
-        const newComment = {
-          id: `c-${Date.now()}`,
-          author: commentAuthor,
-          date: now.toISOString().split('T')[0],
-          text
-        };
-
-        return {
-          ...req,
-          comments: [...req.comments, newComment],
-          activityLog: [
-            ...req.activityLog,
-            { date: dateStr, action: `Comment added: "${text.substring(0, 30)}${text.length > 30 ? '...' : ''}"` }
-          ]
-        };
-      }
-      return req;
-    }));
-
-    toast.success("Comment posted successfully.");
+    if (text.startsWith('Resolution Notes:')) {
+      const cleanNotes = text.replace('Resolution Notes:', '').trim();
+      maintenanceApi.resolve(id, { resolutionNotes: cleanNotes }).then(() => {
+        queryClient.invalidateQueries({ queryKey: ["maintenance"] });
+        toast.success("Maintenance resolved with notes.");
+      });
+    } else {
+      toast.info("General commenting coming soon in full Slack notification sync.");
+    }
   };
 
-  const handleAssignTechnician = (id: string, technician: string) => {
-    const now = new Date();
-    const dateStr = formatDateStr(now);
-
-    setRequests(prev => prev.map(req => {
-      if (req.id === id) {
-        const shouldChangeStatus = req.status === 'Pending' || req.status === 'Approved';
-        const updatedStatus: MaintenanceStatus = shouldChangeStatus ? 'Technician Assigned' : req.status;
-
-        const activity = [
-          ...req.activityLog,
-          { date: dateStr, action: technician ? `Assigned to technician ${technician}` : 'Technician unassigned' }
-        ];
-
-        if (shouldChangeStatus && technician) {
-          activity.push({ date: dateStr, action: `Status changed to Technician Assigned` });
-        }
-
-        return {
-          ...req,
-          technician: technician || undefined,
-          status: updatedStatus,
-          activityLog: activity
-        };
+  const handleAssignTechnician = (id: string, technicianName: string) => {
+    // Find technician user ID
+    api.get("/users").then((res) => {
+      const techUser = res.data?.data?.find((u: any) => u.name.toLowerCase().includes(technicianName.toLowerCase()) && u.role === 'TECHNICIAN');
+      if (techUser) {
+        maintenanceApi.assign(id, techUser.id).then(() => {
+          queryClient.invalidateQueries({ queryKey: ["maintenance"] });
+          toast.success(`Assigned to ${technicianName}`);
+        });
+      } else {
+        toast.error("Technician not found in system.");
       }
-      return req;
-    }));
-
-    if (technician) {
-      toast.success(`Assigned to ${technician}`);
-    } else {
-      toast.info("Technician assignment cleared.");
-    }
+    });
   };
 
   return (
