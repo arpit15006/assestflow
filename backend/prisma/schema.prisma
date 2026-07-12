@@ -1,20 +1,382 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
-generator client {
-  provider = "prisma-client-js"
-}
-
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  ADMIN
+  ASSET_MANAGER
+  DEPARTMENT_HEAD
+  EMPLOYEE
+  AUDITOR
+  TECHNICIAN
+}
+
+enum AssetState {
+  AVAILABLE
+  ALLOCATED
+  RESERVED
+  UNDER_MAINTENANCE
+  LOST
+  RETIRED
+  DISPOSED
+}
+
+enum AssetCondition {
+  NEW
+  GOOD
+  FAIR
+  POOR
+  DAMAGED
+}
+
+enum TransferStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+enum BookingStatus {
+  UPCOMING
+  ONGOING
+  COMPLETED
+  CANCELLED
+}
+
+enum MaintenancePriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum MaintenanceStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  TECHNICIAN_ASSIGNED
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum AuditStatus {
+  SCHEDULED
+  ACTIVE
+  COMPLETED
+}
+
+enum AuditItemVerification {
+  VERIFIED
+  MISSING
+  DAMAGED
+}
+
 model User {
-  id    Int     @id @default(autoincrement())
-  email String  @unique
-  name  String?
+  id                 String              @id @default(uuid())
+  name               String
+  email              String              @unique
+  passwordHash       String
+  role               Role                @default(EMPLOYEE)
+  status             String              @default("ACTIVE") // ACTIVE, INACTIVE
+  departmentId       String?
+  department         Department?         @relation("DepartmentMembers", fields: [departmentId], references: [id])
+  managedDepartments Department[]        @relation("DepartmentHead")
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  
+  allocations        AssetAllocation[]   @relation("UserAllocations")
+  allocatedBy        AssetAllocation[]   @relation("AllocatedByUser")
+  transferRequests   TransferRequest[]   @relation("TransferRequester")
+  transfersResolved  TransferRequest[]   @relation("TransferResolver")
+  bookings           Booking[]
+  reportedIssues     MaintenanceRequest[] @relation("IssueReporter")
+  assignedRepairs    MaintenanceRequest[] @relation("AssignedTechnician")
+  auditorCycles      AuditCycle[]        @relation("AssignedAuditor")
+  notifications      Notification[]
+  activityLogs       ActivityLog[]
+  sessions           Session[]
+  settings           Settings?
+  conversations      AIConversation[]
+  recommendations    AIRecommendation[]
+}
+
+model Department {
+  id                 String            @id @default(uuid())
+  name               String
+  status             String            @default("ACTIVE") // ACTIVE, INACTIVE
+  managerId          String?
+  manager            User?             @relation("DepartmentHead", fields: [managerId], references: [id])
+  parentDepartmentId String?
+  parentDepartment   Department?       @relation("DepartmentHierarchy", fields: [parentDepartmentId], references: [id])
+  subDepartments     Department[]      @relation("DepartmentHierarchy")
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  users              User[]            @relation("DepartmentMembers")
+  assets             Asset[]           @relation("AssetLocation")
+  allocations        AssetAllocation[] @relation("DepartmentAllocations")
+  transfers          TransferRequest[] @relation("TransferTargetDept")
+}
+
+model AssetCategory {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  fields      Json?    // Category-specific fields schema config: e.g. { warrantyMonths: 24 }
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  assets      Asset[]
+}
+
+model Asset {
+  id              String               @id @default(uuid())
+  name            String
+  assetTag        String               @unique // e.g. AF-0001
+  serialNumber    String               @unique
+  categoryId      String
+  category        AssetCategory        @relation(fields: [categoryId], references: [id])
+  acquisitionDate DateTime
+  acquisitionCost Decimal              @db.Decimal(12, 2)
+  condition       AssetCondition       @default(NEW)
+  status          AssetState           @default(AVAILABLE)
+  location        String
+  departmentId    String?
+  department      Department?          @relation("AssetLocation", fields: [departmentId], references: [id])
+  ownerId         String?              // Nullable if unallocated or shared
+  isShared        Boolean              @default(false)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  images          AssetImage[]
+  documents       AssetDocument[]
+  allocations     AssetAllocation[]
+  transfers       TransferRequest[]
+  bookings        Booking[]
+  maintenance     MaintenanceRequest[]
+  auditItems      AuditItem[]
+  qrCode          QRCode?
+  barcode         Barcode?
+}
+
+model AssetImage {
+  id        String   @id @default(uuid())
+  assetId   String
+  asset     Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  url       String
+  publicId  String
+  createdAt DateTime @default(now())
+}
+
+model AssetDocument {
+  id        String   @id @default(uuid())
+  assetId   String
+  asset     Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  name      String
+  url       String
+  publicId  String
+  createdAt DateTime @default(now())
+}
+
+model AssetAllocation {
+  id                 String         @id @default(uuid())
+  assetId            String
+  asset              Asset          @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  userId             String?
+  user               User?          @relation("UserAllocations", fields: [userId], references: [id])
+  departmentId       String?
+  department         Department?    @relation("DepartmentAllocations", fields: [departmentId], references: [id])
+  allocatedById      String
+  allocatedBy        User           @relation("AllocatedByUser", fields: [allocatedById], references: [id])
+  allocatedAt        DateTime       @default(now())
+  expectedReturnDate DateTime?
+  returnedAt         DateTime?
+  returnCondition    AssetCondition?
+  notes              String?
+  status             String         @default("ACTIVE") // ACTIVE, RETURNED
+}
+
+model TransferRequest {
+  id                 String         @id @default(uuid())
+  assetId            String
+  asset              Asset          @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  requesterId        String
+  requester          User           @relation("TransferRequester", fields: [requesterId], references: [id])
+  targetDepartmentId String?
+  targetDepartment   Department?    @relation("TransferTargetDept", fields: [targetDepartmentId], references: [id])
+  targetUserId       String?
+  status             TransferStatus @default(REQUESTED)
+  requestedAt        DateTime       @default(now())
+  resolvedAt         DateTime?
+  resolvedById       String?
+  resolver           User?          @relation("TransferResolver", fields: [resolvedById], references: [id])
+}
+
+model Booking {
+  id         String        @id @default(uuid())
+  assetId    String
+  asset      Asset         @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User          @relation(fields: [userId], references: [id])
+  startTime  DateTime
+  endTime    DateTime
+  status     BookingStatus @default(UPCOMING)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+}
+
+model MaintenanceRequest {
+  id                  String              @id @default(uuid())
+  assetId             String
+  asset               Asset               @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  reporterId          String
+  reporter            User                @relation("IssueReporter", fields: [reporterId], references: [id])
+  assignedTechnicianId String?
+  technician          User?               @relation("AssignedTechnician", fields: [assignedTechnicianId], references: [id])
+  description         String
+  priority            MaintenancePriority @default(MEDIUM)
+  status              MaintenanceStatus   @default(PENDING)
+  cost                Decimal?            @db.Decimal(10, 2)
+  photoUrl            String?
+  resolutionNotes     String?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+}
+
+model AuditCycle {
+  id         String      @id @default(uuid())
+  name       String
+  startDate  DateTime
+  endDate    DateTime
+  status     AuditStatus @default(SCHEDULED)
+  auditorId  String
+  auditor    User        @relation("AssignedAuditor", fields: [auditorId], references: [id])
+  createdAt  DateTime    @default(now())
+  closedAt   DateTime?
+  items      AuditItem[]
+}
+
+model AuditItem {
+  id           String                @id @default(uuid())
+  auditCycleId String
+  auditCycle   AuditCycle            @relation(fields: [auditCycleId], references: [id], onDelete: Cascade)
+  assetId      String
+  asset        Asset                 @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  verification AuditItemVerification @default(VERIFIED)
+  notes        String?
+  updatedAt    DateTime              @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      String   // SYSTEM, ALLOCATION, TRANSFER, BOOKING, MAINTENANCE, AUDIT
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model ActivityLog {
+  id            String   @id @default(uuid())
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action        String   // e.g., CREATE, UPDATE, DELETE, LOGIN
+  tableName     String
+  recordId      String
+  previousValue Json?
+  newValue      Json?
+  ipAddress     String?
+  userAgent     String?
+  device        String?
+  createdAt     DateTime @default(now())
+}
+
+model DashboardCache {
+  id        String   @id @default(uuid())
+  role      Role     @unique
+  data      Json
+  updatedAt DateTime @updatedAt
+}
+
+model EmailLog {
+  id           String   @id @default(uuid())
+  to           String
+  subject      String
+  templateName String
+  status       String   // SENT, FAILED
+  sentAt       DateTime @default(now())
+}
+
+model AIConversation {
+  id        String      @id @default(uuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  createdAt DateTime    @default(now())
+  messages  AIMessage[]
+}
+
+model AIMessage {
+  id             String         @id @default(uuid())
+  conversationId String
+  conversation   AIConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String         // USER, ASSISTANT
+  content        String
+  createdAt      DateTime       @default(now())
+}
+
+model AIRecommendation {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   // MAINTENANCE, BOOKING, OPTIMIZATION
+  title     String
+  content   String
+  score     Float
+  createdAt DateTime @default(now())
+}
+
+model QRCode {
+  id        String @id @default(uuid())
+  assetId   String @unique
+  asset     Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  url       String
+  svgData   String
+}
+
+model Barcode {
+  id      String @id @default(uuid())
+  assetId String @unique
+  asset   Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  value   String @unique
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+}
+
+model Settings {
+  id                String  @id @default(uuid())
+  userId            String  @unique
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  theme             String  @default("dark")
+  emailAlerts       Boolean @default(true)
+  realtimeAlerts    Boolean @default(true)
+  organizationName  String?
+  brandingLogo      String?
 }

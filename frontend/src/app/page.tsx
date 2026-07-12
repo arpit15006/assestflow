@@ -1,65 +1,74 @@
-import Image from "next/image";
+import { Metadata } from "next";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { KPIGrid } from "@/components/dashboard/KPIGrid";
+import { AlertBanner } from "@/components/dashboard/AlertBanner";
+import { QuickActions } from "@/components/dashboard/QuickActions";
+import { RecentActivity } from "@/components/dashboard/RecentActivity";
+import { NotificationsPanel } from "@/components/dashboard/NotificationsPanel";
+import { UpcomingTasks } from "@/components/dashboard/UpcomingTasks";
 
-export default function Home() {
+export const metadata: Metadata = {
+  title: "Dashboard - AssetFlow AI",
+  description: "Enterprise asset tracking, allocation, and resource bookings overview.",
+};
+
+export default function DashboardPage() {
+  const currentDate = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <DashboardLayout>
+      {/* 1. Header Section */}
+      <div className="flex flex-col space-y-1.5 md:flex-row md:items-center md:justify-between md:space-y-0">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight text-zinc-900">
+            Today&apos;s Overview
+          </h2>
+          <p className="text-xs text-zinc-500 font-medium">
+            Welcome back, Arpit! Here is what requires your attention today.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div className="text-xs font-semibold text-zinc-500 bg-white border border-zinc-200/80 rounded-lg px-3.5 py-1.5 shadow-2xs shrink-0 self-start md:self-auto">
+          {currentDate}
         </div>
-      </main>
-    </div>
+      </div>
+
+      {/* 2. Overdue Return Banner */}
+      <AlertBanner />
+
+      {/* 3. KPI Grid Section */}
+      <div className="space-y-3">
+        <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+          Key Performance Indicators
+        </h3>
+        <KPIGrid />
+      </div>
+
+      {/* 4. Quick Actions */}
+      <div className="space-y-3">
+        <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+          Quick Action Shortcuts
+        </h3>
+        <QuickActions />
+      </div>
+
+      {/* 5. Details Section (Activity, Alerts, Tasks) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left Column: Recent Activity Feed */}
+        <div className="lg:col-span-7">
+          <RecentActivity />
+        </div>
+
+        {/* Right Column: Actionable Alerts & Tasks Stack */}
+        <div className="lg:col-span-5 flex flex-col space-y-6">
+          <NotificationsPanel />
+          <UpcomingTasks />
+        </div>
+      </div>
+    </DashboardLayout>
   );
 }
