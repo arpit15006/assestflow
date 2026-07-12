@@ -54,7 +54,7 @@ export default function NotificationsPage() {
       variants={staggerContainer}
       initial="hidden"
       animate="visible"
-      className="space-y-6 p-6 lg:p-8 max-w-[1000px] mx-auto"
+      className="space-y-6 w-full"
     >
       {/* Header */}
       <PageHeader title="Notifications" subtitle="Stay on top of asset activity across your organization.">
